@@ -1,6 +1,7 @@
 use std::f64;
 use std::io::Write;
 
+use crate::bounding_box::BVHNode;
 use crate::colour::Colour;
 use crate::objects::{Collection, Hittable, Interval};
 use crate::random::{random_unit_disk, sample_square};
@@ -102,7 +103,7 @@ impl Renderer {
         } else {
             self.defocus_sample()
         };
-        Ray::new(ray_origin, pixel_sample - ray_origin)
+        Ray::time_dependent(ray_origin, pixel_sample - ray_origin, fastrand::f64())
     }
 
     fn defocus_sample(&self) -> Vec3 {
@@ -110,7 +111,8 @@ impl Renderer {
         self.center + p.x * self.defocus_disk_u + p.y * self.defocus_disk_v
     }
 
-    pub fn render(&self, world: &Collection, f: &mut impl Write, p: &mut impl Write) {
+    pub fn render(&self, world: &mut Collection, f: &mut impl Write, p: &mut impl Write) {
+        let bvh = BVHNode::new(&mut world.objects);
         let pixel_samples_scale = 1.0 / self.samples_per_pixel as f64;
         writeln!(f, "P3\n{} {}\n255", self.image_width, self.image_height).unwrap();
         for y in 0..self.image_height {
@@ -125,7 +127,7 @@ impl Renderer {
                 let mut c = Colour::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
                     let r = self.get_ray(x, y);
-                    c += ray_colour(r, world, self.max_depth);
+                    c += ray_colour(r, &bvh, self.max_depth);
                 }
                 c = pixel_samples_scale * c;
                 writeln!(f, "{}", c.ppm()).unwrap();
@@ -139,7 +141,7 @@ impl Renderer {
     }
 }
 
-fn ray_colour(ray: Ray, world: &Collection, depth: usize) -> Colour {
+fn ray_colour(ray: Ray, world: &BVHNode, depth: usize) -> Colour {
     if depth == 0 {
         return Colour::BLACK;
     }
@@ -151,7 +153,5 @@ fn ray_colour(ray: Ray, world: &Collection, depth: usize) -> Colour {
     }
     let unit_direction = ray.direction.normalize();
     let a = 0.5 * (unit_direction.y + 1.0);
-    (1.0 - a) * Colour::new(1.0, 1.0, 1.0) + a * Colour::new(0.5, 0.7, 1.0)
+    (1.0 - a) * Colour::WHITE + a * Colour::new(0.5, 0.7, 1.0)
 }
-
-// pub fn render(world: &Collection, camera: &Camera, )

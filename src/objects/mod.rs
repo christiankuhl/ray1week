@@ -2,4 +2,4 @@ mod hittable;
 mod sphere;
 
 pub use hittable::{Collection, HitRecord, Hittable, Interval};
-pub use sphere::Sphere;
+pub use sphere::{MovingSphere, Sphere};

@@ -1,3 +1,4 @@
+mod bounding_box;
 pub mod colour;
 pub mod material;
 pub mod objects;

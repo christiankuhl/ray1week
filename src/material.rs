@@ -10,7 +10,7 @@ pub trait Scatter: std::fmt::Debug {
     fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Lambertian {
     albedo: Colour,
 }
@@ -22,12 +22,12 @@ impl Lambertian {
 }
 
 impl Scatter for Lambertian {
-    fn scatter(&self, _ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+    fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         let mut scatter_direction = hit.normal + random_unit_vector();
         if scatter_direction.near_zero() {
             scatter_direction = hit.normal;
         }
-        let ray = Ray::new(hit.p, scatter_direction);
+        let ray = Ray::time_dependent(hit.p, scatter_direction, ray.time);
         Some(ScatterRecord {
             ray,
             attenuation: self.albedo,
@@ -35,7 +35,7 @@ impl Scatter for Lambertian {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Metal {
     albedo: Colour,
     fuzz: f64,
@@ -51,14 +51,14 @@ impl Scatter for Metal {
     fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         let scatter_direction = ray.direction - 2.0 * ray.direction.dot(&hit.normal) * hit.normal;
         let scatter_direction = scatter_direction.normalize() + self.fuzz * random_unit_vector();
-        let ray = Ray::new(hit.p, scatter_direction);
+        let ray = Ray::time_dependent(hit.p, scatter_direction, ray.time);
         Some(ScatterRecord {
             ray,
             attenuation: self.albedo,
         })
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Dielectric {
     refraction_index: f64,
 }
@@ -86,7 +86,7 @@ impl Scatter for Dielectric {
         } else {
             refract(uv, hit.normal, ri)
         };
-        let ray = Ray::new(hit.p, dir);
+        let ray = Ray::time_dependent(hit.p, dir, ray.time);
         Some(ScatterRecord { ray, attenuation })
     }
 }
