@@ -18,6 +18,7 @@ pub struct Camera {
     pub focus_dist: f64,
     pub aspect_ratio: f64,
     pub image_width: usize,
+    pub background: Colour,
 }
 
 pub struct Renderer {
@@ -31,6 +32,7 @@ pub struct Renderer {
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
     center: Point3,
+    background: Colour,
 }
 
 impl Default for Camera {
@@ -44,6 +46,7 @@ impl Default for Camera {
             focus_dist: 10.0,
             aspect_ratio: 16.0 / 9.0,
             image_width: 400,
+            background: Colour::new(0.7, 0.8, 1.0),
         }
     }
 }
@@ -88,6 +91,7 @@ impl Camera {
             defocus_disk_u,
             defocus_disk_v,
             center: self.lookfrom,
+            background: self.background,
         }
     }
 }
@@ -127,7 +131,7 @@ impl Renderer {
                 let mut c = Colour::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
                     let r = self.get_ray(x, y);
-                    c += ray_colour(r, &bvh, self.max_depth);
+                    c += ray_colour(r, &bvh, self.max_depth, self.background);
                 }
                 c = pixel_samples_scale * c;
                 writeln!(f, "{}", c.ppm()).unwrap();
@@ -141,17 +145,25 @@ impl Renderer {
     }
 }
 
-fn ray_colour(ray: Ray, world: &BVHNode, depth: usize) -> Colour {
+fn ray_colour(ray: Ray, world: &BVHNode, depth: usize, background: Colour) -> Colour {
     if depth == 0 {
         return Colour::BLACK;
     }
     if let Some(rec) = world.hit(&ray, Interval::new(0.001, f64::INFINITY)) {
+        let colour_from_emission = rec.material.emit(rec.u, rec.v, rec.p);
         if let Some(scatter) = rec.material.scatter(ray, &rec) {
-            return ray_colour(scatter.ray, world, depth - 1).attenuate(&scatter.attenuation);
+            let colour_from_scatter = ray_colour(scatter.ray, world, depth - 1, background)
+                .attenuate(&scatter.attenuation);
+            colour_from_emission + colour_from_scatter
+        } else {
+            colour_from_emission
         }
-        return Colour::BLACK;
+    } else {
+        background
     }
-    let unit_direction = ray.direction.normalize();
-    let a = 0.5 * (unit_direction.y + 1.0);
-    (1.0 - a) * Colour::WHITE + a * Colour::new(0.5, 0.7, 1.0)
+
+    // TODO: Put this in a SkyTexture struct
+    //  let unit_direction = ray.direction.normalize();
+    //  let a = 0.5 * (unit_direction.y + 1.0);
+    //  (1.0 - a) * Colour::WHITE + a * Colour::new(0.5, 0.7, 1.0)
 }

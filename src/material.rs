@@ -6,7 +6,7 @@ use crate::{
     random::random_unit_vector,
     ray::Ray,
     texture::{SolidColour, Texture},
-    vec3::Vec3,
+    vec3::{Point3, Vec3},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -17,6 +17,7 @@ pub struct ScatterRecord {
 
 pub trait Scatter: std::fmt::Debug {
     fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord>;
+    fn emit(&self, u: f64, v: f64, p: Point3) -> Colour;
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,10 @@ impl Scatter for Lambertian {
             attenuation: self.texture.value(hit.u, hit.v, hit.p),
         })
     }
+
+    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+        Colour::BLACK
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -71,6 +76,10 @@ impl Scatter for Metal {
             ray,
             attenuation: self.albedo,
         })
+    }
+
+    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+        Colour::BLACK
     }
 }
 #[derive(Debug, Clone, Copy)]
@@ -103,6 +112,37 @@ impl Scatter for Dielectric {
         };
         let ray = Ray::time_dependent(hit.p, dir, ray.time);
         Some(ScatterRecord { ray, attenuation })
+    }
+
+    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+        Colour::BLACK
+    }
+}
+
+#[derive(Debug)]
+pub struct DiffuseLight {
+    texture: Rc<dyn Texture>,
+}
+
+impl DiffuseLight {
+    pub fn new(texture: Rc<dyn Texture>) -> Self {
+        Self { texture }
+    }
+
+    pub fn from_colour(albedo: Colour) -> Self {
+        Self {
+            texture: Rc::new(SolidColour::new(albedo)),
+        }
+    }
+}
+
+impl Scatter for DiffuseLight {
+    fn scatter(&self, _ray: Ray, _hit: &HitRecord) -> Option<ScatterRecord> {
+        None
+    }
+
+    fn emit(&self, u: f64, v: f64, p: Point3) -> Colour {
+        self.texture.value(u, v, p)
     }
 }
 
