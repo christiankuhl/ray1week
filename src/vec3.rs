@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, Index, Mul, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, Index, Mul, MulAssign, Neg, Sub, SubAssign};
 
 const EPSILON: f64 = 1e-8;
 
@@ -10,6 +10,27 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    pub const ZERO: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    pub const EX: Self = Self {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    pub const EY: Self = Self {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    };
+    pub const EZ: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    };
+
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
@@ -135,6 +156,12 @@ impl Index<usize> for Vec3 {
             2 => &self.z,
             _ => panic!("Attempt to index AaBb in dimension {index}!"),
         }
+    }
+}
+
+impl MulAssign<f64> for Vec3 {
+    fn mul_assign(&mut self, rhs: f64) {
+        *self = *self * rhs;
     }
 }
 

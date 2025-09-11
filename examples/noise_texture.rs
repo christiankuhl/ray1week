@@ -11,15 +11,18 @@ use ray1week::{
 fn main() {
     let mut world = Collection::new();
 
-    let texture = Rc::new(NoiseTexture::default());
-    let material = Rc::new(Lambertian::from_texture(texture));
+    let ground = Rc::new(NoiseTexture::plain(4.0));
+    let ground = Rc::new(Lambertian::from_texture(ground));
 
-    world.add(Sphere::new(
-        Point3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        material.clone(),
-    ));
-    world.add(Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, material));
+    let marble = Rc::new(NoiseTexture::marble(4.0));
+    let marble = Rc::new(Lambertian::from_texture(marble));
+
+    let turbulence = Rc::new(NoiseTexture::turbulence(1.0, 7));
+    let turbulence = Rc::new(Lambertian::from_texture(turbulence));
+
+    world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground));
+    world.add(Sphere::new(Point3::new(0.0, 2.0, -2.5), 2.0, marble));
+    world.add(Sphere::new(Point3::new(0.0, 2.0, 2.5), 2.0, turbulence));
 
     let cam = Camera {
         aspect_ratio: 16.0 / 9.0,

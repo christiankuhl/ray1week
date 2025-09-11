@@ -4,6 +4,7 @@ use image::{ImageError, ImageReader, Rgb32FImage};
 
 use crate::{
     colour::Colour,
+    random::random_unit_vector,
     vec3::{Point3, Vec3},
 };
 
@@ -104,7 +105,7 @@ impl Texture for ImageTexture {
 
 #[derive(Debug)]
 struct Perlin {
-    rand: [f64; POINT_COUNT],
+    rand: [Vec3; POINT_COUNT],
     perm_x: [u8; POINT_COUNT],
     perm_y: [u8; POINT_COUNT],
     perm_z: [u8; POINT_COUNT],
@@ -113,13 +114,13 @@ struct Perlin {
 impl Perlin {
     fn new() -> Self {
         let mut res = Self {
-            rand: [0.0; POINT_COUNT],
+            rand: [Vec3::ZERO; POINT_COUNT],
             perm_x: [0; POINT_COUNT],
             perm_y: [0; POINT_COUNT],
             perm_z: [0; POINT_COUNT],
         };
         for v in res.rand.iter_mut() {
-            *v = fastrand::f64();
+            *v = random_unit_vector();
         }
         Self::generate(&mut res.perm_x);
         Self::generate(&mut res.perm_y);
@@ -128,11 +129,62 @@ impl Perlin {
     }
 
     pub fn noise(&self, p: Point3) -> f64 {
-        let i = ((4.0 * p.x) as isize) & 0xff;
-        let j = ((4.0 * p.y) as isize) & 0xff;
-        let k = ((4.0 * p.z) as isize) & 0xff;
-        self.rand
-            [(self.perm_x[i as usize] ^ self.perm_y[j as usize] ^ self.perm_z[k as usize]) as usize]
+        let u = p.x - p.x.floor();
+        let v = p.y - p.y.floor();
+        let w = p.z - p.z.floor();
+
+        let i = p.x.floor() as isize;
+        let j = p.y.floor() as isize;
+        let k = p.z.floor() as isize;
+
+        let mut c = [[[Vec3::ZERO; 2]; 2]; 2];
+
+        for (di, ci) in c.iter_mut().enumerate() {
+            for (dj, cij) in ci.iter_mut().enumerate() {
+                for (dk, cijk) in cij.iter_mut().enumerate() {
+                    *cijk = self.rand[(self.perm_x[((i + di as isize) & 0xff) as usize]
+                        ^ self.perm_y[((j + dj as isize) & 0xff) as usize]
+                        ^ self.perm_z[((k + dk as isize) & 0xff) as usize])
+                        as usize];
+                }
+            }
+        }
+
+        Self::perlin_interp(c, u, v, w)
+    }
+
+    pub fn turbulence(&self, p: Point3, depth: usize) -> f64 {
+        let mut acc = 0.0;
+        let mut temp_p = p;
+        let mut weight = 1.0;
+
+        for _ in 0..depth {
+            acc += weight * self.noise(temp_p);
+            weight *= 0.5;
+            temp_p *= 2.0;
+        }
+
+        acc.abs()
+    }
+
+    fn perlin_interp(c: [[[Vec3; 2]; 2]; 2], u: f64, v: f64, w: f64) -> f64 {
+        let uu = u * u * (3.0 - 2.0 * u);
+        let vv = v * v * (3.0 - 2.0 * v);
+        let ww = w * w * (3.0 - 2.0 * w);
+
+        let mut acc = 0.0;
+        for (i, ci) in c.iter().enumerate() {
+            for (j, cij) in ci.iter().enumerate() {
+                for (k, cijk) in cij.iter().enumerate() {
+                    let weight = Vec3::new(u - i as f64, v - j as f64, w - k as f64);
+                    acc += ((i as f64) * uu + (1.0 - (i as f64)) * (1.0 - uu))
+                        * ((j as f64) * vv + (1.0 - (j as f64)) * (1.0 - vv))
+                        * ((k as f64) * ww + (1.0 - (k as f64)) * (1.0 - ww))
+                        * cijk.dot(&weight);
+                }
+            }
+        }
+        acc
     }
 
     fn generate(p: &mut [u8]) {
@@ -156,13 +208,66 @@ impl Default for Perlin {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct NoiseTexture {
+#[derive(Debug)]
+pub struct Plain;
+
+#[derive(Debug)]
+pub struct Turbulence(usize);
+
+#[derive(Debug)]
+pub struct Marble;
+
+#[derive(Debug)]
+pub struct NoiseTexture<T> {
     perlin: Perlin,
+    scale: f64,
+    kind: T,
 }
 
-impl Texture for NoiseTexture {
+impl NoiseTexture<Plain> {
+    pub fn plain(scale: f64) -> Self {
+        Self {
+            perlin: Perlin::default(),
+            scale,
+            kind: Plain,
+        }
+    }
+}
+
+impl NoiseTexture<Turbulence> {
+    pub fn turbulence(scale: f64, depth: usize) -> Self {
+        Self {
+            perlin: Perlin::default(),
+            scale,
+            kind: Turbulence(depth),
+        }
+    }
+}
+
+impl NoiseTexture<Marble> {
+    pub fn marble(scale: f64) -> Self {
+        Self {
+            perlin: Perlin::default(),
+            scale,
+            kind: Marble,
+        }
+    }
+}
+
+impl Texture for NoiseTexture<Plain> {
     fn value(&self, _u: f64, _v: f64, p: Point3) -> Colour {
-        self.perlin.noise(p) * Colour::WHITE
+        0.5 * (1.0 + self.perlin.noise(self.scale * p)) * Colour::WHITE
+    }
+}
+
+impl Texture for NoiseTexture<Turbulence> {
+    fn value(&self, _u: f64, _v: f64, p: Point3) -> Colour {
+        self.perlin.turbulence(self.scale * p, self.kind.0) * Colour::WHITE
+    }
+}
+
+impl Texture for NoiseTexture<Marble> {
+    fn value(&self, _u: f64, _v: f64, p: Point3) -> Colour {
+        0.5 * (1.0 + (self.scale * p.z + 10.0 * self.perlin.turbulence(p, 7)).sin()) * Colour::WHITE
     }
 }
