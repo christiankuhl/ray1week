@@ -52,10 +52,13 @@ impl Hittable for Sphere {
         let front_face = ray.direction.dot(&normal) < 0.0;
         let normal = if front_face { normal } else { -normal };
         let material = self.material.clone();
+        let (u, v) = sphere_uv(normal);
         Some(HitRecord {
             p,
             normal,
             t,
+            u,
+            v,
             front_face,
             material,
         })
@@ -114,10 +117,13 @@ impl Hittable for MovingSphere {
         let front_face = ray.direction.dot(&normal) < 0.0;
         let normal = if front_face { normal } else { -normal };
         let material = self.material.clone();
+        let (u, v) = sphere_uv(normal);
         Some(HitRecord {
             p,
             normal,
             t,
+            u,
+            v,
             front_face,
             material,
         })
@@ -125,4 +131,12 @@ impl Hittable for MovingSphere {
     fn bbox(&self) -> AaBb {
         self.bbox
     }
+}
+
+fn sphere_uv(p: Point3) -> (f64, f64) {
+    use std::f64::consts::PI;
+    let theta = (-p.y).acos();
+    let phi = (-p.z).atan2(p.x) + PI;
+
+    (phi / (2.0 * PI), theta / PI)
 }

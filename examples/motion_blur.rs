@@ -3,6 +3,7 @@ use ray1week::material::Lambertian;
 use ray1week::material::{Dielectric, Metal, Scatter};
 use ray1week::objects::{Collection, MovingSphere, Sphere};
 use ray1week::render::Camera;
+use ray1week::texture::CheckerTexture;
 use ray1week::vec3::{Point3, Vec3};
 
 use std::collections::HashMap;
@@ -14,7 +15,12 @@ const BOUNDARY: i32 = 11;
 
 fn main() {
     let mut materials: Vec<Rc<dyn Scatter>> = Vec::new();
-    let ground_material = Rc::new(Lambertian::new(Colour::new(0.5, 0.5, 0.5)));
+    let checker = Rc::new(CheckerTexture::solid(
+        0.32,
+        Colour::new(0.2, 0.3, 0.1),
+        Colour::new(0.9, 0.9, 0.9),
+    ));
+    let ground_material = Rc::new(Lambertian::from_texture(checker));
     let material1 = Rc::new(Dielectric::new(1.5));
     let material2 = Rc::new(Lambertian::new(Colour::new(0.4, 0.2, 0.1)));
     let material3 = Rc::new(Metal::new(Colour::new(0.7, 0.6, 0.5), 0.0));
@@ -50,7 +56,7 @@ fn main() {
     world.add(Sphere::new(Point3::new(4.0, 1.0, 0.0), 1.0, material3));
 
     let cam = Camera {
-        image_width: 800,
+        image_width: 1200,
         vfov: 20.0,
         lookfrom: Point3::new(13.0, 2.0, 3.0),
         lookat: Point3::new(0.0, 0.0, 0.0),
@@ -60,7 +66,7 @@ fn main() {
     };
 
     let mut f = File::create("img.ppm").unwrap();
-    let renderer = cam.renderer(50, 50);
+    let renderer = cam.renderer(100, 50);
     renderer.render(&mut world, &mut f, &mut stderr().lock());
 }
 

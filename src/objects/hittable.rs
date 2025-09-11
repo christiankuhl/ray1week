@@ -11,6 +11,8 @@ pub struct HitRecord {
     pub normal: Vec3,
     pub material: Rc<dyn Scatter>,
     pub t: f64,
+    pub u: f64,
+    pub v: f64,
     pub front_face: bool,
 }
 

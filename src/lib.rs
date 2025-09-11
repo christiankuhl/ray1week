@@ -5,4 +5,5 @@ pub mod objects;
 mod random;
 mod ray;
 pub mod render;
+pub mod texture;
 pub mod vec3;

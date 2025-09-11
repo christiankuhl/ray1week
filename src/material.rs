@@ -1,4 +1,13 @@
-use crate::{colour::Colour, objects::HitRecord, random::random_unit_vector, ray::Ray, vec3::Vec3};
+use std::rc::Rc;
+
+use crate::{
+    colour::Colour,
+    objects::HitRecord,
+    random::random_unit_vector,
+    ray::Ray,
+    texture::{SolidColour, Texture},
+    vec3::Vec3,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ScatterRecord {
@@ -10,14 +19,20 @@ pub trait Scatter: std::fmt::Debug {
     fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord>;
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Lambertian {
-    albedo: Colour,
+    texture: Rc<dyn Texture>,
 }
 
 impl Lambertian {
     pub fn new(albedo: Colour) -> Self {
-        Self { albedo }
+        Self {
+            texture: Rc::new(SolidColour::new(albedo)),
+        }
+    }
+
+    pub fn from_texture(texture: Rc<dyn Texture>) -> Self {
+        Self { texture }
     }
 }
 
@@ -30,7 +45,7 @@ impl Scatter for Lambertian {
         let ray = Ray::time_dependent(hit.p, scatter_direction, ray.time);
         Some(ScatterRecord {
             ray,
-            attenuation: self.albedo,
+            attenuation: self.texture.value(hit.u, hit.v, hit.p),
         })
     }
 }
