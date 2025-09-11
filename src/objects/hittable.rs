@@ -31,11 +31,9 @@ impl Interval {
         self.min < t && t < self.max
     }
 
-    pub fn extend(&self, delta: f64) -> Self {
-        Self {
-            min: self.min - delta,
-            max: self.max + delta,
-        }
+    pub fn extend(&mut self, delta: f64) {
+        self.min -= delta;
+        self.max += delta;
     }
 
     pub fn enclosing(interval1: Self, interval2: Self) -> Self {

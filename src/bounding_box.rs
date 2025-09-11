@@ -1,6 +1,8 @@
 use std::ops::Index;
 use std::rc::Rc;
 
+const DELTA: f64 = 0.0001;
+
 use crate::{
     objects::{HitRecord, Hittable, Interval},
     ray::Ray,
@@ -31,14 +33,18 @@ impl AaBb {
         } else {
             Interval::new(b.z, a.z)
         };
-        Self { x, y, z }
+        let mut res = Self { x, y, z };
+        res.pad_to_minumums();
+        res
     }
 
     pub fn enclosing(box1: &Self, box2: &Self) -> Self {
         let x = Interval::enclosing(box1.x, box2.x);
         let y = Interval::enclosing(box1.y, box2.y);
         let z = Interval::enclosing(box1.z, box2.z);
-        Self { x, y, z }
+        let mut res = Self { x, y, z };
+        res.pad_to_minumums();
+        res
     }
 
     pub fn hit(&self, r: &Ray, ray_t: Interval) -> Option<Interval> {
@@ -81,6 +87,18 @@ impl AaBb {
             .max_by(|(_i, a), (_, b)| a.partial_cmp(b).unwrap())
             .unwrap()
             .0
+    }
+
+    fn pad_to_minumums(&mut self) {
+        if self.x.length() < DELTA {
+            self.x.extend(DELTA);
+        }
+        if self.y.length() < DELTA {
+            self.y.extend(DELTA);
+        }
+        if self.z.length() < DELTA {
+            self.z.extend(DELTA);
+        }
     }
 }
 
