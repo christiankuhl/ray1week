@@ -6,6 +6,7 @@ use ray1week::{
     objects::{Collection, Cube, Quad},
     render::Camera,
     texture::SolidColour,
+    transform::{Rotate, Translate},
     vec3::{Point3, Vec3},
 };
 
@@ -54,16 +55,23 @@ fn main() {
         white.clone(),
     ));
 
-    world.add(Cube::new(
-        Point3::new(130.0, 0.0, 65.0),
-        Point3::new(295.0, 165.0, 230.0),
+    let box1 = Rc::new(Cube::new(
+        Point3::ZERO,
+        Point3::new(165.0, 330.0, 165.0),
         white.clone(),
     ));
-    world.add(Cube::new(
-        Point3::new(265.0, 0.0, 295.0),
-        Point3::new(430.0, 330.0, 460.0),
-        white,
+    let box1 = Rc::new(Rotate::new(box1, 0.0, 15.0, 0.0));
+    let box1 = Translate::new(box1, Vec3::new(265.0, 0.0, 295.0));
+    world.add(box1);
+
+    let box2 = Rc::new(Cube::new(
+        Point3::ZERO,
+        Point3::new(165.0, 165.0, 165.0),
+        white.clone(),
     ));
+    let box2 = Rc::new(Rotate::new(box2, 0.0, -18.0, 0.0));
+    let box2 = Translate::new(box2, Vec3::new(130.0, 0.0, 65.0));
+    world.add(box2);
 
     let cam = Camera {
         aspect_ratio: 1.0,

@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, Index, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign};
 
 const EPSILON: f64 = 1e-8;
 
@@ -159,6 +159,17 @@ impl Index<usize> for Vec3 {
     }
 }
 
+impl IndexMut<usize> for Vec3 {
+    fn index_mut(&mut self, index: usize) -> &mut f64 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => panic!("Attempt to index AaBb in dimension {index}!"),
+        }
+    }
+}
+
 impl MulAssign<f64> for Vec3 {
     fn mul_assign(&mut self, rhs: f64) {
         *self = *self * rhs;
@@ -166,3 +177,63 @@ impl MulAssign<f64> for Vec3 {
 }
 
 pub type Point3 = Vec3;
+
+#[derive(Debug, Clone, Copy)]
+pub struct Mat3([[f64; 3]; 3]);
+
+impl Mat3 {
+    pub fn rotation(x: f64, y: f64, z: f64) -> Self {
+        let alpha = z.to_radians();
+        let beta = y.to_radians();
+        let gamma = x.to_radians();
+
+        Self([
+            [
+                beta.cos() * alpha.cos(),
+                alpha.cos() * beta.sin() * gamma.sin() - alpha.sin() * gamma.cos(),
+                alpha.cos() * beta.sin() * gamma.cos() + alpha.sin() * gamma.sin(),
+            ],
+            [
+                alpha.sin() * beta.cos(),
+                alpha.sin() * beta.sin() * gamma.sin() + alpha.cos() * gamma.cos(),
+                alpha.sin() * beta.sin() * gamma.cos() - alpha.cos() * gamma.sin(),
+            ],
+            [
+                -beta.sin(),
+                beta.cos() * gamma.sin(),
+                beta.cos() * gamma.cos(),
+            ],
+        ])
+    }
+
+    pub fn transpose(&self) -> Self {
+        Self([
+            [self.0[0][0], self.0[1][0], self.0[2][0]],
+            [self.0[0][1], self.0[1][1], self.0[2][1]],
+            [self.0[0][2], self.0[1][2], self.0[2][2]],
+        ])
+    }
+}
+
+impl Mul<Vec3> for Mat3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        let x = Vec3::new(self.0[0][0], self.0[0][1], self.0[0][2]).dot(&rhs);
+        let y = Vec3::new(self.0[1][0], self.0[1][1], self.0[1][2]).dot(&rhs);
+        let z = Vec3::new(self.0[2][0], self.0[2][1], self.0[2][2]).dot(&rhs);
+        Self::Output { x, y, z }
+    }
+}
+
+impl Mul<f64> for Mat3 {
+    type Output = Mat3;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Mat3([
+            [rhs * self.0[0][0], rhs * self.0[0][1], rhs * self.0[0][2]],
+            [rhs * self.0[1][0], rhs * self.0[1][1], rhs * self.0[1][2]],
+            [rhs * self.0[2][0], rhs * self.0[2][1], rhs * self.0[2][2]],
+        ])
+    }
+}

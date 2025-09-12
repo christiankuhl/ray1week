@@ -6,4 +6,5 @@ mod random;
 mod ray;
 pub mod render;
 pub mod texture;
+pub mod transform;
 pub mod vec3;

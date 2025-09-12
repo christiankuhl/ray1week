@@ -1,8 +1,9 @@
-use std::ops::Index;
+use std::ops::{Add, Index};
 use std::rc::Rc;
 
 const DELTA: f64 = 0.0001;
 
+use crate::vec3::Vec3;
 use crate::{
     objects::{HitRecord, Hittable, Interval},
     ray::Ray,
@@ -11,9 +12,9 @@ use crate::{
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AaBb {
-    x: Interval,
-    y: Interval,
-    z: Interval,
+    pub(crate) x: Interval,
+    pub(crate) y: Interval,
+    pub(crate) z: Interval,
 }
 
 impl AaBb {
@@ -111,6 +112,18 @@ impl Index<usize> for AaBb {
             1 => &self.y,
             2 => &self.z,
             _ => panic!("Attempt to index AaBb in dimension {index}!"),
+        }
+    }
+}
+
+impl Add<Vec3> for AaBb {
+    type Output = AaBb;
+
+    fn add(self, rhs: Vec3) -> Self::Output {
+        Self::Output {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
         }
     }
 }

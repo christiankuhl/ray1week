@@ -1,3 +1,4 @@
+use std::ops::Add;
 use std::rc::Rc;
 
 use crate::bounding_box::AaBb;
@@ -60,6 +61,17 @@ impl Default for Interval {
         Self {
             min: f64::INFINITY,
             max: -f64::INFINITY,
+        }
+    }
+}
+
+impl Add<f64> for Interval {
+    type Output = Interval;
+
+    fn add(self, rhs: f64) -> Self::Output {
+        Self::Output {
+            min: self.min + rhs,
+            max: self.max + rhs,
         }
     }
 }
