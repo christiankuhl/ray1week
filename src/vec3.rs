@@ -58,6 +58,14 @@ impl Vec3 {
     pub fn near_zero(&self) -> bool {
         self.x.abs() < EPSILON && self.y.abs() < EPSILON && self.z.abs() < EPSILON
     }
+
+    pub fn random(min: f64, max: f64) -> Self {
+        Self {
+            x: fastrand::f64() * (max - min) + min,
+            y: fastrand::f64() * (max - min) + min,
+            z: fastrand::f64() * (max - min) + min,
+        }
+    }
 }
 
 impl Mul<f64> for Vec3 {

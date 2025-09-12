@@ -159,3 +159,27 @@ fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
     r0 = r0 * r0;
     r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }
+
+#[derive(Debug)]
+pub struct Isotropic {
+    texture: Rc<dyn Texture>,
+}
+
+impl Isotropic {
+    pub fn new(texture: Rc<dyn Texture>) -> Self {
+        Self { texture }
+    }
+}
+
+impl Scatter for Isotropic {
+    fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+        Some(ScatterRecord {
+            ray: Ray::time_dependent(hit.p, random_unit_vector(), ray.time),
+            attenuation: self.texture.value(hit.u, hit.v, hit.p),
+        })
+    }
+
+    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+        Colour::BLACK
+    }
+}

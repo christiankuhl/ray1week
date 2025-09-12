@@ -54,6 +54,13 @@ impl Interval {
     pub fn length(&self) -> f64 {
         self.max - self.min
     }
+
+    pub fn universe() -> Self {
+        Self {
+            min: -f64::INFINITY,
+            max: f64::INFINITY,
+        }
+    }
 }
 
 impl Default for Interval {

@@ -8,3 +8,4 @@ pub mod render;
 pub mod texture;
 pub mod transform;
 pub mod vec3;
+pub mod volumetrics;
