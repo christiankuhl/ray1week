@@ -1,14 +1,16 @@
 use std::f64;
 use std::io::Write;
+use std::rc::Rc;
 
 use crate::bounding_box::BVHNode;
 use crate::colour::Colour;
-use crate::objects::{Collection, Hittable, Interval};
+use crate::objects::{Collection, Hittable, Interval, sphere_uv};
 use crate::random::{random_unit_disk, sample_square};
 use crate::ray::Ray;
+use crate::texture::{SkyTexture, Texture};
 use crate::vec3::{Point3, Vec3};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Camera {
     pub lookfrom: Point3,
     pub lookat: Point3,
@@ -18,7 +20,7 @@ pub struct Camera {
     pub focus_dist: f64,
     pub aspect_ratio: f64,
     pub image_width: usize,
-    pub background: Colour,
+    pub background: Rc<dyn Texture>,
 }
 
 pub struct Renderer {
@@ -32,21 +34,21 @@ pub struct Renderer {
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
     center: Point3,
-    background: Colour,
+    background: Rc<dyn Texture>,
 }
 
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            lookfrom: Point3::new(0.0, 0.0, 0.0),
-            lookat: Point3::new(0.0, 0.0, -1.0),
-            up: Vec3::new(0.0, 1.0, 0.0),
+            lookfrom: Point3::ZERO,
+            lookat: -Point3::EZ,
+            up: Vec3::EY,
             vfov: 90.0,
             defocus_angle: 0.0,
             focus_dist: 10.0,
             aspect_ratio: 16.0 / 9.0,
             image_width: 400,
-            background: Colour::new(0.7, 0.8, 1.0),
+            background: Rc::new(SkyTexture::default()),
         }
     }
 }
@@ -91,7 +93,7 @@ impl Camera {
             defocus_disk_u,
             defocus_disk_v,
             center: self.lookfrom,
-            background: self.background,
+            background: self.background.clone(),
         }
     }
 }
@@ -131,7 +133,7 @@ impl Renderer {
                 let mut c = Colour::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
                     let r = self.get_ray(x, y);
-                    c += ray_colour(r, &bvh, self.max_depth, self.background);
+                    c += ray_colour(r, &bvh, self.max_depth, self.background.clone());
                 }
                 c = pixel_samples_scale * c;
                 writeln!(f, "{}", c.ppm()).unwrap();
@@ -145,7 +147,12 @@ impl Renderer {
     }
 }
 
-fn ray_colour(ray: Ray, world: &BVHNode, depth: usize, background: Colour) -> Colour {
+fn ray_colour<'a>(
+    ray: Ray,
+    world: &'a BVHNode,
+    depth: usize,
+    background: Rc<dyn Texture + 'a>,
+) -> Colour {
     if depth == 0 {
         return Colour::BLACK;
     }
@@ -159,11 +166,7 @@ fn ray_colour(ray: Ray, world: &BVHNode, depth: usize, background: Colour) -> Co
             colour_from_emission
         }
     } else {
-        background
+        let (u, v) = sphere_uv(ray.direction.normalize());
+        background.value(u, v, Vec3::ZERO)
     }
-
-    // TODO: Put this in a SkyTexture struct
-    //  let unit_direction = ray.direction.normalize();
-    //  let a = 0.5 * (unit_direction.y + 1.0);
-    //  (1.0 - a) * Colour::WHITE + a * Colour::new(0.5, 0.7, 1.0)
 }

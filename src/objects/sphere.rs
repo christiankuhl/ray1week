@@ -133,7 +133,7 @@ impl Hittable for MovingSphere {
     }
 }
 
-fn sphere_uv(p: Point3) -> (f64, f64) {
+pub(crate) fn sphere_uv(p: Point3) -> (f64, f64) {
     use std::f64::consts::PI;
     let theta = (-p.y).acos();
     let phi = (-p.z).atan2(p.x) + PI;

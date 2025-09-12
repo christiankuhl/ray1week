@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{f64::consts::PI, rc::Rc};
 
 use image::{ImageError, ImageReader, Rgb32FImage};
 
@@ -269,5 +269,28 @@ impl Texture for NoiseTexture<Turbulence> {
 impl Texture for NoiseTexture<Marble> {
     fn value(&self, _u: f64, _v: f64, p: Point3) -> Colour {
         0.5 * (1.0 + (self.scale * p.z + 10.0 * self.perlin.turbulence(p, 7)).sin()) * Colour::WHITE
+    }
+}
+
+#[derive(Debug)]
+pub struct SkyTexture {
+    light: Colour,
+    dark: Colour,
+}
+
+impl Texture for SkyTexture {
+    fn value(&self, _u: f64, v: f64, _p: Point3) -> Colour {
+        let y = -(v * PI).cos();
+        let a = 0.5 * (y + 1.0);
+        (1.0 - a) * self.light + a * self.dark
+    }
+}
+
+impl Default for SkyTexture {
+    fn default() -> Self {
+        Self {
+            light: Colour::WHITE,
+            dark: Colour::new(0.5, 0.7, 1.0),
+        }
     }
 }

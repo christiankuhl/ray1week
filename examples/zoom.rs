@@ -47,7 +47,7 @@ fn main() {
     };
 
     // Zoomed in view
-    let mut zoom = camera;
+    let mut zoom = camera.clone();
     zoom.vfov = 20.0;
 
     // Render to file

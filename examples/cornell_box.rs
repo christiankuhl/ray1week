@@ -5,6 +5,7 @@ use ray1week::{
     material::{DiffuseLight, Lambertian},
     objects::{Collection, Quad},
     render::Camera,
+    texture::SolidColour,
     vec3::{Point3, Vec3},
 };
 
@@ -56,7 +57,7 @@ fn main() {
     let cam = Camera {
         aspect_ratio: 1.0,
         image_width: 600,
-        background: Colour::BLACK,
+        background: Rc::new(SolidColour::new(Colour::BLACK)),
         vfov: 40.0,
         lookfrom: Point3::new(278.0, 278.0, -800.0),
         lookat: Point3::new(278.0, 278.0, 0.0),
