@@ -26,7 +26,8 @@ pub struct Camera {
 pub struct Renderer {
     image_width: usize,
     image_height: usize,
-    samples_per_pixel: usize,
+    sqrt_spp: usize,
+    recip_sqrt_spp: f64,
     pixel00_loc: Point3,
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
@@ -82,10 +83,13 @@ impl Camera {
         let defocus_disk_u = u * defocus_radius;
         let defocus_disk_v = v * defocus_radius;
 
+        let sqrt_spp = (samples_per_pixel as f64).sqrt() as usize;
+
         Renderer {
             image_width: self.image_width,
             image_height,
-            samples_per_pixel,
+            sqrt_spp,
+            recip_sqrt_spp: 1.0 / sqrt_spp as f64,
             pixel00_loc,
             pixel_delta_u,
             pixel_delta_v,
@@ -99,8 +103,8 @@ impl Camera {
 }
 
 impl Renderer {
-    fn get_ray(&self, x: usize, y: usize) -> Ray {
-        let offset = sample_square();
+    fn get_ray(&self, x: usize, y: usize, si: usize, sj: usize) -> Ray {
+        let offset = self.sample_square_stratified(si, sj);
         let pixel_sample = self.pixel00_loc
             + ((x as f64 + offset.x) * self.pixel_delta_u)
             + ((y as f64 + offset.y) * self.pixel_delta_v);
@@ -112,6 +116,14 @@ impl Renderer {
         Ray::time_dependent(ray_origin, pixel_sample - ray_origin, fastrand::f64())
     }
 
+    fn sample_square_stratified(&self, si: usize, sj: usize) -> Vec3 {
+        Vec3::new(
+            ((si as f64) + fastrand::f64()) * self.recip_sqrt_spp - 0.5,
+            ((sj as f64) + fastrand::f64()) * self.recip_sqrt_spp - 0.5,
+            0.0,
+        )
+    }
+
     fn defocus_sample(&self) -> Vec3 {
         let p = random_unit_disk();
         self.center + p.x * self.defocus_disk_u + p.y * self.defocus_disk_v
@@ -119,7 +131,7 @@ impl Renderer {
 
     pub fn render(&self, world: &mut Collection, f: &mut impl Write, p: &mut impl Write) {
         let bvh = BVHNode::new(&mut world.objects);
-        let pixel_samples_scale = 1.0 / self.samples_per_pixel as f64;
+        let pixel_samples_scale = 1.0 / (self.sqrt_spp * self.sqrt_spp) as f64;
         writeln!(f, "P3\n{} {}\n255", self.image_width, self.image_height).unwrap();
         for y in 0..self.image_height {
             let remaining = self.image_height - y;
@@ -131,9 +143,11 @@ impl Renderer {
             .unwrap();
             for x in 0..self.image_width {
                 let mut c = Colour::new(0.0, 0.0, 0.0);
-                for _ in 0..self.samples_per_pixel {
-                    let r = self.get_ray(x, y);
-                    c += ray_colour(r, &bvh, self.max_depth, self.background.clone());
+                for sj in 0..self.sqrt_spp {
+                    for si in 0..self.sqrt_spp {
+                        let r = self.get_ray(x, y, si, sj);
+                        c += ray_colour(r, &bvh, self.max_depth, self.background.clone());
+                    }
                 }
                 c = pixel_samples_scale * c;
                 writeln!(f, "{}", c.ppm()).unwrap();
