@@ -1,3 +1,4 @@
+use image::ImageError;
 use ray1week::colour::Colour;
 use ray1week::material::Lambertian;
 use ray1week::material::{Dielectric, Metal, Scatter};
@@ -7,23 +8,22 @@ use ray1week::texture::CheckerTexture;
 use ray1week::vec3::{Point3, Vec3};
 
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::stderr;
-use std::rc::Rc;
+use std::sync::Arc;
 
 const BOUNDARY: i32 = 11;
 
-fn main() {
-    let mut materials: Vec<Rc<dyn Scatter>> = Vec::new();
-    let checker = Rc::new(CheckerTexture::solid(
+fn main() -> Result<(), ImageError> {
+    let mut materials: Vec<Arc<dyn Scatter>> = Vec::new();
+    let checker = Arc::new(CheckerTexture::solid(
         0.32,
         Colour::new(0.2, 0.3, 0.1),
         Colour::new(0.9, 0.9, 0.9),
     ));
-    let ground_material = Rc::new(Lambertian::from_texture(checker));
-    let material1 = Rc::new(Dielectric::new(1.5));
-    let material2 = Rc::new(Lambertian::new(Colour::new(0.4, 0.2, 0.1)));
-    let material3 = Rc::new(Metal::new(Colour::new(0.7, 0.6, 0.5), 0.0));
+    let ground_material = Arc::new(Lambertian::from_texture(checker));
+    let material1 = Arc::new(Dielectric::new(1.5));
+    let material2 = Arc::new(Lambertian::new(Colour::new(0.4, 0.2, 0.1)));
+    let material3 = Arc::new(Metal::new(Colour::new(0.7, 0.6, 0.5), 0.0));
     let mut world = Collection::new();
     world.add(Sphere::new(
         Point3::new(0.0, -1000.0, 0.0),
@@ -65,13 +65,12 @@ fn main() {
         ..Camera::default()
     };
 
-    let mut f = File::create("img.ppm").unwrap();
     let renderer = cam.renderer(100, 50);
-    renderer.render(&mut world, &mut f, &mut stderr().lock());
+    renderer.render(&mut world, "motion_blur.png", &mut stderr())
 }
 
 fn make_random_spheres(
-    materials: &mut Vec<Rc<dyn Scatter>>,
+    materials: &mut Vec<Arc<dyn Scatter>>,
     centers: &mut Vec<Point3>,
     moving: &mut HashMap<(i32, i32), Point3>,
 ) {
@@ -88,7 +87,7 @@ fn make_random_spheres(
                 if choose_mat < 0.8 {
                     // diffuse
                     let albedo = Colour::random().attenuate(&Colour::random());
-                    materials.push(Rc::new(Lambertian::new(albedo)));
+                    materials.push(Arc::new(Lambertian::new(albedo)));
                     moving.insert((a, b), center + Vec3::new(0.0, 0.5 * fastrand::f64(), 0.0));
                 } else if choose_mat < 0.95 {
                     // metal
@@ -98,10 +97,10 @@ fn make_random_spheres(
                         fastrand::f64() / 2.0 + 0.5,
                     );
                     let fuzz = 0.5 * fastrand::f64();
-                    materials.push(Rc::new(Metal::new(albedo, fuzz)));
+                    materials.push(Arc::new(Metal::new(albedo, fuzz)));
                 } else {
                     // glass
-                    materials.push(Rc::new(Dielectric::new(1.5)));
+                    materials.push(Arc::new(Dielectric::new(1.5)));
                 }
                 centers.push(center);
             }

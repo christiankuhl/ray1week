@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::{
     bounding_box::AaBb,
@@ -10,20 +10,21 @@ use crate::{
 
 const EPSILON: f64 = 1e-8;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Quad {
     q: Point3,
     u: Vec3,
     v: Vec3,
-    material: Rc<dyn Scatter>,
+    material: Arc<dyn Scatter>,
     bbox: AaBb,
     normal: Vec3,
     intercept: f64,
     w: Vec3,
+    area: f64,
 }
 
 impl Quad {
-    pub fn new(q: Point3, u: Vec3, v: Vec3, material: Rc<dyn Scatter>) -> Self {
+    pub fn new(q: Point3, u: Vec3, v: Vec3, material: Arc<dyn Scatter>) -> Self {
         let box1 = AaBb::new(q, q + u + v);
         let box2 = AaBb::new(q + u, q + v);
         let bbox = AaBb::enclosing(&box1, &box2);
@@ -31,6 +32,7 @@ impl Quad {
         let w = n / n.dot(&n);
         let normal = n.normalize();
         let intercept = normal.dot(&q);
+        let area = n.length();
 
         Self {
             q,
@@ -41,6 +43,7 @@ impl Quad {
             normal,
             intercept,
             w,
+            area,
         }
     }
 }
@@ -89,5 +92,29 @@ impl Hittable for Quad {
 
     fn bbox(&self) -> AaBb {
         self.bbox
+    }
+
+    fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64 {
+        if let Some(rec) = self.hit(
+            &Ray::new(*origin, *direction),
+            Interval::new(0.001, f64::INFINITY),
+        ) {
+            let distance_squared = rec.t * rec.t * direction.dot(direction);
+            let cosine = (direction.dot(&rec.normal) / direction.length()).abs();
+            distance_squared / (cosine * self.area)
+        } else {
+            0.0
+        }
+    }
+    fn random(&self, origin: &Point3) -> Vec3 {
+        let p = self.q + (fastrand::f64() * self.u) + (fastrand::f64() * self.v);
+        p - *origin
+    }
+    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+        if self.material.is_emissive() {
+            vec![Arc::new(self.clone())]
+        } else {
+            vec![]
+        }
     }
 }

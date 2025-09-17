@@ -1,57 +1,69 @@
-use std::rc::Rc;
+use std::{f64::consts::PI, sync::Arc};
 
 use crate::{
     colour::Colour,
     objects::HitRecord,
-    random::random_unit_vector,
+    random::{CosinePDF, DirectionalPDF, UniformSphericalPDF, random_unit_vector},
     ray::Ray,
     texture::{SolidColour, Texture},
     vec3::{Point3, Vec3},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct ScatterRecord {
-    pub ray: Ray,
     pub attenuation: Colour,
+    pub scattered: ScatterResult,
 }
 
-pub trait Scatter: std::fmt::Debug {
+#[derive(Clone)]
+pub enum ScatterResult {
+    PDF(Arc<dyn DirectionalPDF>),
+    SpecularRay(Ray),
+}
+
+pub trait Scatter: std::fmt::Debug + Send + Sync {
     fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord>;
-    fn emit(&self, u: f64, v: f64, p: Point3) -> Colour;
+    fn emit(&self, hit: &HitRecord, u: f64, v: f64, p: Point3) -> Colour;
+    fn scattering_pdf(&self, ray: Ray, hit: &HitRecord, scattered: Ray) -> f64;
+    fn is_emissive(&self) -> bool;
 }
 
 #[derive(Debug, Clone)]
 pub struct Lambertian {
-    texture: Rc<dyn Texture>,
+    texture: Arc<dyn Texture>,
 }
 
 impl Lambertian {
     pub fn new(albedo: Colour) -> Self {
         Self {
-            texture: Rc::new(SolidColour::new(albedo)),
+            texture: Arc::new(SolidColour::new(albedo)),
         }
     }
 
-    pub fn from_texture(texture: Rc<dyn Texture>) -> Self {
+    pub fn from_texture(texture: Arc<dyn Texture>) -> Self {
         Self { texture }
     }
 }
 
 impl Scatter for Lambertian {
-    fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
-        let mut scatter_direction = hit.normal + random_unit_vector();
-        if scatter_direction.near_zero() {
-            scatter_direction = hit.normal;
-        }
-        let ray = Ray::time_dependent(hit.p, scatter_direction, ray.time);
+    fn scatter(&self, _ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         Some(ScatterRecord {
-            ray,
             attenuation: self.texture.value(hit.u, hit.v, hit.p),
+            scattered: ScatterResult::PDF(Arc::new(CosinePDF::new(&hit.normal))),
         })
     }
 
-    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+    fn emit(&self, _hit: &HitRecord, _u: f64, _v: f64, _p: Point3) -> Colour {
         Colour::BLACK
+    }
+
+    fn scattering_pdf(&self, _ray: Ray, hit: &HitRecord, scattered: Ray) -> f64 {
+        let cos_theta = hit.normal.dot(&scattered.direction.normalize());
+        cos_theta.max(0.0) / PI
+    }
+
+    fn is_emissive(&self) -> bool {
+        false
     }
 }
 
@@ -71,15 +83,23 @@ impl Scatter for Metal {
     fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         let scatter_direction = ray.direction - 2.0 * ray.direction.dot(&hit.normal) * hit.normal;
         let scatter_direction = scatter_direction.normalize() + self.fuzz * random_unit_vector();
-        let ray = Ray::time_dependent(hit.p, scatter_direction, ray.time);
+        let scattered = Ray::time_dependent(hit.p, scatter_direction, ray.time);
         Some(ScatterRecord {
-            ray,
             attenuation: self.albedo,
+            scattered: ScatterResult::SpecularRay(scattered),
         })
     }
 
-    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+    fn emit(&self, _hit: &HitRecord, _u: f64, _v: f64, _p: Point3) -> Colour {
         Colour::BLACK
+    }
+
+    fn scattering_pdf(&self, _ray: Ray, _hit: &HitRecord, _scattered: Ray) -> f64 {
+        panic!("Asked for a scattering PDF on a specular material!")
+    }
+
+    fn is_emissive(&self) -> bool {
+        false
     }
 }
 #[derive(Debug, Clone, Copy)]
@@ -110,28 +130,39 @@ impl Scatter for Dielectric {
         } else {
             refract(uv, hit.normal, ri)
         };
-        let ray = Ray::time_dependent(hit.p, dir, ray.time);
-        Some(ScatterRecord { ray, attenuation })
+        let scattered = Ray::time_dependent(hit.p, dir, ray.time);
+        Some(ScatterRecord {
+            attenuation,
+            scattered: ScatterResult::SpecularRay(scattered),
+        })
     }
 
-    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+    fn emit(&self, _hit: &HitRecord, _u: f64, _v: f64, _p: Point3) -> Colour {
         Colour::BLACK
+    }
+
+    fn scattering_pdf(&self, _ray: Ray, _hit: &HitRecord, _scattered: Ray) -> f64 {
+        panic!("Asked for scattering PDF on a specular material!")
+    }
+
+    fn is_emissive(&self) -> bool {
+        false
     }
 }
 
 #[derive(Debug)]
 pub struct DiffuseLight {
-    texture: Rc<dyn Texture>,
+    texture: Arc<dyn Texture>,
 }
 
 impl DiffuseLight {
-    pub fn new(texture: Rc<dyn Texture>) -> Self {
+    pub fn new(texture: Arc<dyn Texture>) -> Self {
         Self { texture }
     }
 
     pub fn from_colour(albedo: Colour) -> Self {
         Self {
-            texture: Rc::new(SolidColour::new(albedo)),
+            texture: Arc::new(SolidColour::new(albedo)),
         }
     }
 }
@@ -141,8 +172,19 @@ impl Scatter for DiffuseLight {
         None
     }
 
-    fn emit(&self, u: f64, v: f64, p: Point3) -> Colour {
+    fn emit(&self, hit: &HitRecord, u: f64, v: f64, p: Point3) -> Colour {
+        if !hit.front_face {
+            return Colour::BLACK;
+        }
         self.texture.value(u, v, p)
+    }
+
+    fn scattering_pdf(&self, _ray: Ray, _hit: &HitRecord, _scattered: Ray) -> f64 {
+        panic!("Asked for a scattering PDF on a purely emissive material!")
+    }
+
+    fn is_emissive(&self) -> bool {
+        true
     }
 }
 
@@ -162,24 +204,32 @@ fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
 
 #[derive(Debug)]
 pub struct Isotropic {
-    texture: Rc<dyn Texture>,
+    texture: Arc<dyn Texture>,
 }
 
 impl Isotropic {
-    pub fn new(texture: Rc<dyn Texture>) -> Self {
+    pub fn new(texture: Arc<dyn Texture>) -> Self {
         Self { texture }
     }
 }
 
 impl Scatter for Isotropic {
-    fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+    fn scatter(&self, _ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         Some(ScatterRecord {
-            ray: Ray::time_dependent(hit.p, random_unit_vector(), ray.time),
             attenuation: self.texture.value(hit.u, hit.v, hit.p),
+            scattered: ScatterResult::PDF(Arc::new(UniformSphericalPDF)),
         })
     }
 
-    fn emit(&self, _u: f64, _v: f64, _p: Point3) -> Colour {
+    fn emit(&self, _hit: &HitRecord, _u: f64, _v: f64, _p: Point3) -> Colour {
         Colour::BLACK
+    }
+
+    fn scattering_pdf(&self, _ray: Ray, _hit: &HitRecord, _scattered: Ray) -> f64 {
+        1.0 / (4.0 * PI)
+    }
+
+    fn is_emissive(&self) -> bool {
+        false
     }
 }

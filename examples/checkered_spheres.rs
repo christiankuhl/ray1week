@@ -1,5 +1,6 @@
-use std::{fs::File, io::stderr, rc::Rc};
+use std::{io::stderr, sync::Arc};
 
+use image::ImageError;
 use ray1week::{
     colour::Colour,
     material::Lambertian,
@@ -9,16 +10,16 @@ use ray1week::{
     vec3::{Point3, Vec3},
 };
 
-fn main() {
+fn main() -> Result<(), ImageError> {
     let mut world = Collection::new();
 
-    let spatial_checker = Rc::new(CheckerTexture::solid(
+    let spatial_checker = Arc::new(CheckerTexture::solid(
         0.032,
         Colour::new(0.2, 0.3, 0.1),
         Colour::new(0.9, 0.9, 0.9),
     ));
-    let uv_checker = Rc::new(UVSlice::new(spatial_checker, 0.0));
-    let material = Rc::new(Lambertian::from_texture(uv_checker));
+    let uv_checker = Arc::new(UVSlice::new(spatial_checker, 0.0));
+    let material = Arc::new(Lambertian::from_texture(uv_checker));
 
     world.add(Sphere::new(
         Point3::new(0.0, -10.0, 0.0),
@@ -40,6 +41,5 @@ fn main() {
 
     let renderer = cam.renderer(100, 50);
 
-    let mut f = File::create("checkered_spheres.ppm").unwrap();
-    renderer.render(&mut world, &mut f, &mut stderr().lock());
+    renderer.render(&mut world, "checkered_spheres.png", &mut stderr())
 }

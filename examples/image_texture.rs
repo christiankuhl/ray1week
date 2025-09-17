@@ -1,5 +1,6 @@
-use std::{fs::File, io::stderr, rc::Rc};
+use std::{io::stderr, sync::Arc};
 
+use image::ImageError;
 use ray1week::{
     material::Lambertian,
     objects::{Collection, Sphere},
@@ -8,11 +9,11 @@ use ray1week::{
     vec3::{Point3, Vec3},
 };
 
-fn main() {
+fn main() -> Result<(), ImageError> {
     let mut world = Collection::new();
 
-    let map = Rc::new(ImageTexture::new("examples/resources/earthmap.jpg").unwrap());
-    let material = Rc::new(Lambertian::from_texture(map));
+    let map = Arc::new(ImageTexture::new("examples/resources/earthmap.jpg").unwrap());
+    let material = Arc::new(Lambertian::from_texture(map));
 
     world.add(Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, material));
 
@@ -29,6 +30,5 @@ fn main() {
 
     let renderer = cam.renderer(100, 50);
 
-    let mut f = File::create("globe.ppm").unwrap();
-    renderer.render(&mut world, &mut f, &mut stderr().lock());
+    renderer.render(&mut world, "globe.png", &mut stderr())
 }

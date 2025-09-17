@@ -1,20 +1,20 @@
+use image::ImageError;
 use ray1week::colour::Colour;
 use ray1week::material::{Dielectric, Lambertian, Metal};
 use ray1week::objects::{Collection, Sphere};
 use ray1week::render::Camera;
 use ray1week::vec3::Point3;
 
-use std::fs::File;
 use std::io::stderr;
-use std::rc::Rc;
+use std::sync::Arc;
 
-fn main() {
+fn main() -> Result<(), ImageError> {
     // Scene setup
-    let material_ground = Rc::new(Lambertian::new(Colour::new(0.8, 0.8, 0.0)));
-    let material_center = Rc::new(Lambertian::new(Colour::new(0.1, 0.2, 0.5)));
-    let material_left = Rc::new(Dielectric::new(1.5));
-    let air_bubble = Rc::new(Dielectric::new(1.0 / 1.5));
-    let material_right = Rc::new(Metal::new(Colour::new(0.8, 0.6, 0.2), 0.1));
+    let material_ground = Arc::new(Lambertian::new(Colour::new(0.8, 0.8, 0.0)));
+    let material_center = Arc::new(Lambertian::new(Colour::new(0.1, 0.2, 0.5)));
+    let material_left = Arc::new(Dielectric::new(1.5));
+    let air_bubble = Arc::new(Dielectric::new(1.0 / 1.5));
+    let material_right = Arc::new(Metal::new(Colour::new(0.8, 0.6, 0.2), 0.1));
     let mut world = Collection::new();
     world.add(Sphere::new(
         Point3::new(0.0, -100.5, -1.0),
@@ -52,9 +52,9 @@ fn main() {
 
     // Render to file
     let renderer = camera.renderer(50, 10);
-    let mut f = File::create("zoom_out.ppm").unwrap();
-    renderer.render(&mut world, &mut f, &mut stderr().lock());
+    renderer
+        .render(&mut world, "zoom_out.png", &mut stderr())
+        .unwrap();
     let renderer = zoom.renderer(50, 10);
-    let mut f = File::create("zoom_in.ppm").unwrap();
-    renderer.render(&mut world, &mut f, &mut stderr().lock());
+    renderer.render(&mut world, "zoom_in.png", &mut stderr())
 }

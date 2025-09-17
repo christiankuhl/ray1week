@@ -1,5 +1,6 @@
-use std::{fs::File, io::stderr, rc::Rc};
+use std::{io::stderr, sync::Arc};
 
+use image::ImageError;
 use ray1week::{
     colour::Colour,
     material::Lambertian,
@@ -8,15 +9,15 @@ use ray1week::{
     vec3::{Point3, Vec3},
 };
 
-fn main() {
+fn main() -> Result<(), ImageError> {
     let mut world = Collection::new();
 
     // Materials
-    let left_red = Rc::new(Lambertian::new(Colour::new(1.0, 0.2, 0.2)));
-    let back_green = Rc::new(Lambertian::new(Colour::new(0.2, 1.0, 0.2)));
-    let right_blue = Rc::new(Lambertian::new(Colour::new(0.2, 0.2, 1.0)));
-    let upper_orange = Rc::new(Lambertian::new(Colour::new(1.0, 0.5, 0.0)));
-    let lower_teal = Rc::new(Lambertian::new(Colour::new(0.2, 0.8, 0.8)));
+    let left_red = Arc::new(Lambertian::new(Colour::new(1.0, 0.2, 0.2)));
+    let back_green = Arc::new(Lambertian::new(Colour::new(0.2, 1.0, 0.2)));
+    let right_blue = Arc::new(Lambertian::new(Colour::new(0.2, 0.2, 1.0)));
+    let upper_orange = Arc::new(Lambertian::new(Colour::new(1.0, 0.5, 0.0)));
+    let lower_teal = Arc::new(Lambertian::new(Colour::new(0.2, 0.8, 0.8)));
 
     // Quads
     world.add(Quad::new(
@@ -62,6 +63,5 @@ fn main() {
     };
 
     let renderer = cam.renderer(100, 50);
-    let mut file = File::create("quads.ppm").unwrap();
-    renderer.render(&mut world, &mut file, &mut stderr().lock());
+    renderer.render(&mut world, "quads.png", &mut stderr())
 }

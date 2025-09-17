@@ -1,5 +1,5 @@
 use std::ops::{Add, Index};
-use std::rc::Rc;
+use std::sync::Arc;
 
 const DELTA: f64 = 0.0001;
 
@@ -128,14 +128,15 @@ impl Add<Vec3> for AaBb {
     }
 }
 
+#[derive(Debug)]
 pub struct BVHNode<'a> {
-    left: Rc<dyn Hittable + 'a>,
-    right: Rc<dyn Hittable + 'a>,
+    left: Arc<dyn Hittable + 'a>,
+    right: Arc<dyn Hittable + 'a>,
     bbox: AaBb,
 }
 
 impl<'a> BVHNode<'a> {
-    pub fn new(objects: &mut Vec<Rc<dyn Hittable + 'a>>) -> Self {
+    pub fn new(objects: &mut Vec<Arc<dyn Hittable + 'a>>) -> Self {
         let mut bbox = AaBb::default();
         for obj in objects.iter() {
             bbox = AaBb::enclosing(&bbox, &obj.bbox());
@@ -166,8 +167,8 @@ impl<'a> BVHNode<'a> {
         });
         let mid = objects.len() / 2;
         let mut right = objects.split_off(mid);
-        let left = Rc::new(Self::new(objects));
-        let right = Rc::new(Self::new(&mut right));
+        let left = Arc::new(Self::new(objects));
+        let right = Arc::new(Self::new(&mut right));
         Self { left, right, bbox }
     }
 }
@@ -185,5 +186,16 @@ impl<'a> Hittable for BVHNode<'a> {
     }
     fn bbox(&self) -> AaBb {
         self.bbox
+    }
+    fn pdf_value(&self, _origin: &Point3, _direction: &Vec3) -> f64 {
+        panic!("Asked for PDF on a bounding box!")
+    }
+    fn random(&self, _origin: &Point3) -> Vec3 {
+        panic!("Asked for PDF on a bounding box!")
+    }
+    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+        let mut res = self.left.lights();
+        res.extend(self.right.lights());
+        res
     }
 }

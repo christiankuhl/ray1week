@@ -1,16 +1,17 @@
+use std::fmt::Debug;
 use std::ops::Add;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::bounding_box::AaBb;
 use crate::material::Scatter;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
-    pub material: Rc<dyn Scatter>,
+    pub material: Arc<dyn Scatter>,
     pub t: f64,
     pub u: f64,
     pub v: f64,
@@ -83,14 +84,17 @@ impl Add<f64> for Interval {
     }
 }
 
-pub trait Hittable {
+pub trait Hittable: Debug + Send + Sync {
     fn hit(&self, ray: &Ray, range: Interval) -> Option<HitRecord>;
     fn bbox(&self) -> AaBb;
+    fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64;
+    fn random(&self, origin: &Point3) -> Vec3;
+    fn lights(&self) -> Vec<Arc<dyn Hittable>>;
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Collection<'a> {
-    pub objects: Vec<Rc<dyn Hittable + 'a>>,
+    pub objects: Vec<Arc<dyn Hittable + 'a>>,
     bbox: AaBb,
 }
 
@@ -102,9 +106,16 @@ impl<'a> Collection<'a> {
         }
     }
 
+    pub fn with_objects(objects: Vec<Arc<dyn Hittable>>) -> Self {
+        Self {
+            objects,
+            bbox: AaBb::default(),
+        }
+    }
+
     pub fn add(&mut self, object: impl Hittable + 'a) {
         self.bbox = AaBb::enclosing(&self.bbox, &object.bbox());
-        self.objects.push(Rc::new(object));
+        self.objects.push(Arc::new(object));
     }
 }
 
@@ -124,5 +135,18 @@ impl<'a> Hittable for Collection<'a> {
     }
     fn bbox(&self) -> AaBb {
         self.bbox
+    }
+    fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64 {
+        let weight = 1.0 / self.objects.len() as f64;
+        self.objects
+            .iter()
+            .map(|o| o.pdf_value(origin, direction) * weight)
+            .sum()
+    }
+    fn random(&self, origin: &Point3) -> Vec3 {
+        self.objects[fastrand::usize(0..self.objects.len())].random(origin)
+    }
+    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+        self.objects.iter().flat_map(|o| o.lights()).collect()
     }
 }

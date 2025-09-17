@@ -1,21 +1,27 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::{
     colour::Colour,
     material::{Isotropic, Scatter},
     objects::{HitRecord, Hittable, Interval},
+    ray::Ray,
     texture::SolidColour,
-    vec3::Vec3,
+    vec3::{Point3, Vec3},
 };
 
+#[derive(Clone, Debug)]
 pub struct ConstantMedium {
-    boundary: Rc<dyn Hittable>,
+    boundary: Arc<dyn Hittable>,
     neg_inv_density: f64,
-    phase_function: Rc<dyn Scatter>,
+    phase_function: Arc<dyn Scatter>,
 }
 
 impl ConstantMedium {
-    pub fn new(boundary: Rc<dyn Hittable>, density: f64, phase_function: Rc<dyn Scatter>) -> Self {
+    pub fn new(
+        boundary: Arc<dyn Hittable>,
+        density: f64,
+        phase_function: Arc<dyn Scatter>,
+    ) -> Self {
         Self {
             boundary,
             neg_inv_density: -1.0 / density,
@@ -23,11 +29,11 @@ impl ConstantMedium {
         }
     }
 
-    pub fn isotropic(boundary: Rc<dyn Hittable>, density: f64, albedo: Colour) -> Self {
+    pub fn isotropic(boundary: Arc<dyn Hittable>, density: f64, albedo: Colour) -> Self {
         Self::new(
             boundary,
             density,
-            Rc::new(Isotropic::new(Rc::new(SolidColour::new(albedo)))),
+            Arc::new(Isotropic::new(Arc::new(SolidColour::new(albedo)))),
         )
     }
 }
@@ -37,11 +43,7 @@ impl Hittable for ConstantMedium {
         self.boundary.bbox()
     }
 
-    fn hit(
-        &self,
-        ray: &crate::ray::Ray,
-        range: crate::objects::Interval,
-    ) -> Option<crate::objects::HitRecord> {
+    fn hit(&self, ray: &Ray, range: Interval) -> Option<HitRecord> {
         if let Some(ref mut rec1) = self.boundary.hit(ray, Interval::universe()) {
             if let Some(ref mut rec2) = self
                 .boundary
@@ -71,7 +73,7 @@ impl Hittable for ConstantMedium {
                     p: ray.at(t),
                     normal: Vec3::EX,
                     front_face: true,
-                    material: self.phase_function.clone(),
+                    material: Arc::clone(&self.phase_function),
                     u: 0.0,
                     v: 0.0,
                 })
@@ -80,6 +82,20 @@ impl Hittable for ConstantMedium {
             }
         } else {
             None
+        }
+    }
+
+    fn pdf_value(&self, _origin: &Point3, _direction: &Vec3) -> f64 {
+        0.0
+    }
+    fn random(&self, _origin: &Point3) -> Vec3 {
+        Vec3::EX
+    }
+    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+        if self.phase_function.is_emissive() {
+            vec![Arc::new(self.clone())]
+        } else {
+            vec![]
         }
     }
 }

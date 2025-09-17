@@ -1,4 +1,4 @@
-use std::{f64::consts::PI, rc::Rc};
+use std::{f64::consts::PI, sync::Arc};
 
 use image::{ImageError, ImageReader, Rgb32FImage};
 
@@ -10,7 +10,7 @@ use crate::{
 
 const POINT_COUNT: usize = 256;
 
-pub trait Texture: std::fmt::Debug {
+pub trait Texture: std::fmt::Debug + Send + Sync {
     fn value(&self, u: f64, v: f64, p: Point3) -> Colour;
 }
 
@@ -34,16 +34,16 @@ impl Texture for SolidColour {
 #[derive(Debug)]
 pub struct CheckerTexture {
     inv_scale: f64,
-    even: Rc<dyn Texture>,
-    odd: Rc<dyn Texture>,
+    even: Arc<dyn Texture>,
+    odd: Arc<dyn Texture>,
 }
 
 impl CheckerTexture {
     pub fn solid(scale: f64, even: Colour, odd: Colour) -> Self {
         Self {
             inv_scale: 1.0 / scale,
-            even: Rc::new(SolidColour::new(even)),
-            odd: Rc::new(SolidColour::new(odd)),
+            even: Arc::new(SolidColour::new(even)),
+            odd: Arc::new(SolidColour::new(odd)),
         }
     }
 }
@@ -63,12 +63,12 @@ impl Texture for CheckerTexture {
 
 #[derive(Debug)]
 pub struct UVSlice {
-    texture: Rc<dyn Texture>,
+    texture: Arc<dyn Texture>,
     z: f64,
 }
 
 impl UVSlice {
-    pub fn new(texture: Rc<dyn Texture>, z: f64) -> Self {
+    pub fn new(texture: Arc<dyn Texture>, z: f64) -> Self {
         Self { texture, z }
     }
 }

@@ -1,5 +1,7 @@
 use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
+use image::Rgb;
+
 use crate::vec3::Vec3;
 
 #[derive(Debug, Clone, Copy)]
@@ -46,6 +48,16 @@ impl Colour {
             g: fastrand::f64(),
             b: fastrand::f64(),
         }
+    }
+}
+
+impl From<&Colour> for Rgb<f32> {
+    fn from(value: &Colour) -> Self {
+        Self([
+            value.r.clamp(0.0, 1.0).sqrt() as f32,
+            value.g.clamp(0.0, 1.0).sqrt() as f32,
+            value.b.clamp(0.0, 1.0).sqrt() as f32,
+        ])
     }
 }
 

@@ -245,3 +245,27 @@ impl Mul<f64> for Mat3 {
         ])
     }
 }
+
+pub struct ONB {
+    pub u: Vec3,
+    pub v: Vec3,
+    pub w: Vec3,
+}
+
+impl ONB {
+    pub fn new(u: Vec3, v: Vec3, w: Vec3) -> Self {
+        Self { u, v, w }
+    }
+
+    pub fn from_normal(n: &Vec3) -> Self {
+        let w = n.normalize();
+        let a = if w.x.abs() > 0.9 { Vec3::EY } else { Vec3::EX };
+        let v = w.cross(&a).normalize();
+        let u = w.cross(&v);
+        Self { u, v, w }
+    }
+
+    pub fn transform(&self, v: &Vec3) -> Vec3 {
+        v.x * self.u + v.y * self.v + v.z * self.w
+    }
+}

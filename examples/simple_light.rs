@@ -1,5 +1,6 @@
-use std::{fs::File, io::stderr, rc::Rc};
+use std::{io::stderr, sync::Arc};
 
+use image::ImageError;
 use ray1week::{
     colour::Colour,
     material::{DiffuseLight, Lambertian},
@@ -9,17 +10,17 @@ use ray1week::{
     vec3::{Point3, Vec3},
 };
 
-fn main() {
+fn main() -> Result<(), ImageError> {
     let mut world = Collection::new();
-    let marble = Rc::new(NoiseTexture::marble(4.0));
-    let marble = Rc::new(Lambertian::from_texture(marble));
-    let ground = Rc::new(NoiseTexture::plain(1.0));
-    let ground = Rc::new(Lambertian::from_texture(ground));
+    let marble = Arc::new(NoiseTexture::marble(4.0));
+    let marble = Arc::new(Lambertian::from_texture(marble));
+    let ground = Arc::new(NoiseTexture::plain(1.0));
+    let ground = Arc::new(Lambertian::from_texture(ground));
 
     world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground));
     world.add(Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, marble));
 
-    let difflight = Rc::new(DiffuseLight::from_colour(Colour::new(4.0, 4.0, 4.0)));
+    let difflight = Arc::new(DiffuseLight::from_colour(Colour::new(4.0, 4.0, 4.0)));
     world.add(Quad::new(
         Point3::new(3.0, 1.0, -2.0),
         2.0 * Vec3::EX,
@@ -31,7 +32,7 @@ fn main() {
     let cam = Camera {
         aspect_ratio: 16.0 / 9.0,
         image_width: 400,
-        background: Rc::new(SolidColour::new(Colour::BLACK)),
+        background: Arc::new(SolidColour::new(Colour::BLACK)),
         vfov: 20.0,
         lookfrom: Point3::new(26.0, 3.0, 6.0),
         lookat: Point3::new(0.0, 2.0, 0.0),
@@ -39,6 +40,5 @@ fn main() {
     };
 
     let renderer = cam.renderer(100, 50);
-    let mut file = File::create("diffuse_light.ppm").unwrap();
-    renderer.render(&mut world, &mut file, &mut stderr().lock());
+    renderer.render(&mut world, "diffuse_light.png", &mut stderr())
 }

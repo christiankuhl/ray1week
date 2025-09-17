@@ -1,5 +1,6 @@
-use std::{fs::File, io::stderr, rc::Rc};
+use std::{io::stderr, sync::Arc};
 
+use image::ImageError;
 use ray1week::{
     material::Lambertian,
     objects::{Collection, Sphere},
@@ -8,17 +9,17 @@ use ray1week::{
     vec3::{Point3, Vec3},
 };
 
-fn main() {
+fn main() -> Result<(), ImageError> {
     let mut world = Collection::new();
 
-    let ground = Rc::new(NoiseTexture::plain(4.0));
-    let ground = Rc::new(Lambertian::from_texture(ground));
+    let ground = Arc::new(NoiseTexture::plain(4.0));
+    let ground = Arc::new(Lambertian::from_texture(ground));
 
-    let marble = Rc::new(NoiseTexture::marble(4.0));
-    let marble = Rc::new(Lambertian::from_texture(marble));
+    let marble = Arc::new(NoiseTexture::marble(4.0));
+    let marble = Arc::new(Lambertian::from_texture(marble));
 
-    let turbulence = Rc::new(NoiseTexture::turbulence(1.0, 7));
-    let turbulence = Rc::new(Lambertian::from_texture(turbulence));
+    let turbulence = Arc::new(NoiseTexture::turbulence(1.0, 7));
+    let turbulence = Arc::new(Lambertian::from_texture(turbulence));
 
     world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground));
     world.add(Sphere::new(Point3::new(0.0, 2.0, -2.5), 2.0, marble));
@@ -37,6 +38,5 @@ fn main() {
 
     let renderer = cam.renderer(100, 50);
 
-    let mut f = File::create("perlin_spheres.ppm").unwrap();
-    renderer.render(&mut world, &mut f, &mut stderr().lock());
+    renderer.render(&mut world, "perlin_spheres.png", &mut stderr())
 }

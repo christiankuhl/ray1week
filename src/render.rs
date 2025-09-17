@@ -1,11 +1,19 @@
 use std::f64;
+use std::fmt::Display;
 use std::io::Write;
-use std::rc::Rc;
+use std::path::Path;
+use std::sync::atomic::AtomicUsize;
+use std::sync::{Arc, Mutex};
+
+use image::buffer::ConvertBuffer;
+use image::{ImageError, Rgb32FImage, RgbImage};
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::bounding_box::BVHNode;
 use crate::colour::Colour;
+use crate::material::ScatterResult;
 use crate::objects::{Collection, Hittable, Interval, sphere_uv};
-use crate::random::{random_unit_disk, sample_square};
+use crate::random::{DirectionalPDF, HittablePDF, MixturePDF, random_unit_disk};
 use crate::ray::Ray;
 use crate::texture::{SkyTexture, Texture};
 use crate::vec3::{Point3, Vec3};
@@ -20,7 +28,7 @@ pub struct Camera {
     pub focus_dist: f64,
     pub aspect_ratio: f64,
     pub image_width: usize,
-    pub background: Rc<dyn Texture>,
+    pub background: Arc<dyn Texture>,
 }
 
 pub struct Renderer {
@@ -35,7 +43,7 @@ pub struct Renderer {
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
     center: Point3,
-    background: Rc<dyn Texture>,
+    background: Arc<dyn Texture>,
 }
 
 impl Default for Camera {
@@ -49,7 +57,7 @@ impl Default for Camera {
             focus_dist: 10.0,
             aspect_ratio: 16.0 / 9.0,
             image_width: 400,
-            background: Rc::new(SkyTexture::default()),
+            background: Arc::new(SkyTexture::default()),
         }
     }
 }
@@ -103,6 +111,7 @@ impl Camera {
 }
 
 impl Renderer {
+    const BLOCK_SIZE: usize = 64;
     fn get_ray(&self, x: usize, y: usize, si: usize, sj: usize) -> Ray {
         let offset = self.sample_square_stratified(si, sj);
         let pixel_sample = self.pixel00_loc
@@ -129,58 +138,158 @@ impl Renderer {
         self.center + p.x * self.defocus_disk_u + p.y * self.defocus_disk_v
     }
 
-    pub fn render(&self, world: &mut Collection, f: &mut impl Write, p: &mut impl Write) {
-        let bvh = BVHNode::new(&mut world.objects);
+    fn render_block(&self, block: &mut ImageBlock, world: &BVHNode, lights: Arc<Collection>) {
         let pixel_samples_scale = 1.0 / (self.sqrt_spp * self.sqrt_spp) as f64;
-        writeln!(f, "P3\n{} {}\n255", self.image_width, self.image_height).unwrap();
-        for y in 0..self.image_height {
-            let remaining = self.image_height - y;
-            write!(
-                p,
-                "\rScanlines remaining: {remaining} / {}...",
-                self.image_height
-            )
-            .unwrap();
-            for x in 0..self.image_width {
+        for y in block.ymin..block.ymax {
+            for x in block.xmin..block.xmax {
                 let mut c = Colour::new(0.0, 0.0, 0.0);
                 for sj in 0..self.sqrt_spp {
                     for si in 0..self.sqrt_spp {
                         let r = self.get_ray(x, y, si, sj);
-                        c += ray_colour(r, &bvh, self.max_depth, self.background.clone());
+                        c += ray_colour(
+                            r,
+                            world,
+                            Arc::clone(&lights),
+                            self.max_depth,
+                            Arc::clone(&self.background),
+                        );
                     }
                 }
                 c = pixel_samples_scale * c;
-                writeln!(f, "{}", c.ppm()).unwrap();
+                block.write(x, y, c);
             }
         }
+    }
+
+    pub fn render<F, P>(&self, world: &mut Collection, path: F, p: &mut P) -> Result<(), ImageError>
+    where
+        F: AsRef<Path> + Display,
+        P: Write + Sync + Send,
+    {
+        let p = Arc::new(Mutex::new(p));
+        writeln!(p.lock().unwrap(), "Collecting light sources...").unwrap();
+        let lights = Arc::new(Collection::with_objects(world.lights()));
+        writeln!(p.lock().unwrap(), "Building render node hierarchy...").unwrap();
+        let bvh = BVHNode::new(&mut world.objects);
+        let mut blocks = self.image_blocks();
         writeln!(
-            p,
-            "\rDone.                                                                      "
+            p.lock().unwrap(),
+            "Split target image into {} blocks...",
+            blocks.len()
         )
         .unwrap();
+        let done = AtomicUsize::new(0);
+        let total = blocks.len();
+        blocks.par_iter_mut().for_each(|block| {
+            self.render_block(block, &bvh, lights.clone());
+            done.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            write!(
+                p.lock().unwrap(),
+                "\r{:.2}% done...",
+                done.load(std::sync::atomic::Ordering::Relaxed) as f64 / total as f64 * 100.0
+            )
+            .unwrap();
+        });
+        writeln!(
+            p.lock().unwrap(),
+            "\rRay tracing done.                             "
+        )
+        .unwrap();
+        let buffer = self.assemble_image(&blocks);
+        writeln!(p.lock().unwrap(), "Saving image to {path}...").unwrap();
+        buffer.save(path)
+    }
+
+    fn image_blocks(&self) -> Vec<ImageBlock> {
+        let mut blocks = Vec::new();
+        for i in 0..self.image_height / Self::BLOCK_SIZE + 1 {
+            let ymin = i * Self::BLOCK_SIZE;
+            let ymax = ((i + 1) * Self::BLOCK_SIZE).min(self.image_height);
+            for j in 0..self.image_width / Self::BLOCK_SIZE + 1 {
+                let xmin = j * Self::BLOCK_SIZE;
+                let xmax = ((j + 1) * Self::BLOCK_SIZE).min(self.image_width);
+                blocks.push(ImageBlock::new(xmin, xmax, ymin, ymax));
+            }
+        }
+        blocks
+    }
+
+    fn assemble_image(&self, blocks: &[ImageBlock]) -> RgbImage {
+        let mut buffer = Rgb32FImage::new(self.image_width as u32, self.image_height as u32);
+        for block in blocks {
+            for (k, colour) in block.buffer.iter().enumerate() {
+                let x = k % (block.xmax - block.xmin) + block.xmin;
+                let y = k / (block.xmax - block.xmin) + block.ymin;
+                *buffer.get_pixel_mut(x as u32, y as u32) = colour.into();
+            }
+        }
+        buffer.convert()
     }
 }
 
 fn ray_colour<'a>(
     ray: Ray,
     world: &'a BVHNode,
+    lights: Arc<Collection<'a>>,
     depth: usize,
-    background: Rc<dyn Texture + 'a>,
+    background: Arc<dyn Texture + 'a>,
 ) -> Colour {
     if depth == 0 {
         return Colour::BLACK;
     }
     if let Some(rec) = world.hit(&ray, Interval::new(0.001, f64::INFINITY)) {
-        let colour_from_emission = rec.material.emit(rec.u, rec.v, rec.p);
+        let colour_from_emission = rec.material.emit(&rec, rec.u, rec.v, rec.p);
         if let Some(scatter) = rec.material.scatter(ray, &rec) {
-            let colour_from_scatter = ray_colour(scatter.ray, world, depth - 1, background)
-                .attenuate(&scatter.attenuation);
-            colour_from_emission + colour_from_scatter
+            match scatter.scattered {
+                ScatterResult::SpecularRay(specular_ray) => {
+                    ray_colour(specular_ray, world, lights, depth - 1, background)
+                        .attenuate(&scatter.attenuation)
+                }
+                ScatterResult::PDF(pdf) => {
+                    let mixture = if !lights.objects.is_empty() {
+                        let lights_ptr = Arc::clone(&lights);
+                        let light_pdf = HittablePDF::new(lights_ptr, rec.p);
+                        MixturePDF::new(Arc::new(light_pdf), pdf)
+                    } else {
+                        MixturePDF::new(pdf.clone(), pdf)
+                    };
+                    let scattered = Ray::time_dependent(rec.p, mixture.generate(), ray.time);
+                    let pdf_value = mixture.value(&scattered.direction);
+                    let scattering_pdf = rec.material.scattering_pdf(ray, &rec, scattered);
+                    let colour_from_scatter = scattering_pdf / pdf_value
+                        * ray_colour(scattered, world, lights, depth - 1, background)
+                            .attenuate(&scatter.attenuation);
+                    colour_from_emission + colour_from_scatter
+                }
+            }
         } else {
             colour_from_emission
         }
     } else {
         let (u, v) = sphere_uv(ray.direction.normalize());
         background.value(u, v, Vec3::ZERO)
+    }
+}
+
+struct ImageBlock {
+    xmin: usize,
+    xmax: usize,
+    ymin: usize,
+    ymax: usize,
+    buffer: Vec<Colour>,
+}
+
+impl ImageBlock {
+    fn write(&mut self, x: usize, y: usize, c: Colour) {
+        self.buffer[(x - self.xmin) + (y - self.ymin) * (self.xmax - self.xmin)] = c;
+    }
+    fn new(xmin: usize, xmax: usize, ymin: usize, ymax: usize) -> Self {
+        Self {
+            xmin,
+            xmax,
+            ymin,
+            ymax,
+            buffer: vec![Colour::BLACK; (xmax - xmin) * (ymax - ymin)],
+        }
     }
 }
