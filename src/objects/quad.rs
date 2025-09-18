@@ -15,11 +15,12 @@ pub struct Quad {
     q: Point3,
     u: Vec3,
     v: Vec3,
+    alpha0: Vec3,
+    beta0: Vec3,
     material: Arc<dyn Scatter>,
     bbox: AaBb,
     normal: Vec3,
     intercept: f64,
-    w: Vec3,
     area: f64,
 }
 
@@ -30,6 +31,8 @@ impl Quad {
         let bbox = AaBb::enclosing(&box1, &box2);
         let n = u.cross(&v);
         let w = n / n.dot(&n);
+        let alpha0 = v.cross(&w);
+        let beta0 = w.cross(&u);
         let normal = n.normalize();
         let intercept = normal.dot(&q);
         let area = n.length();
@@ -38,11 +41,12 @@ impl Quad {
             q,
             u,
             v,
+            alpha0,
+            beta0,
             material,
             bbox,
             normal,
             intercept,
-            w,
             area,
         }
     }
@@ -50,39 +54,32 @@ impl Quad {
 
 impl Hittable for Quad {
     fn hit(&self, ray: &Ray, range: Interval) -> Option<HitRecord> {
-        let denom = self.normal.dot(&ray.direction);
-
+        let det = self.normal.dot(&ray.direction);
         // No hit if the ray is parallel to the plane.
-        if denom.abs() < EPSILON {
+        if det.abs() < EPSILON {
             return None;
         }
-
         // Return false if the hit point parameter t is outside the ray interval.
-        let t = (self.intercept - self.normal.dot(&ray.origin)) / denom;
+        let t = (self.intercept - self.normal.dot(&ray.origin)) / det;
         if !range.surrounds(t) {
             return None;
         }
-
         // Determine if the hit point lies within the planar shape using its plane coordinates.
         let intersection = ray.at(t);
         let planar_hitpt_vector = intersection - self.q;
-        let alpha = self.w.dot(&planar_hitpt_vector.cross(&self.v));
-        let beta = self.w.dot(&self.u.cross(&planar_hitpt_vector));
+        let alpha = planar_hitpt_vector.dot(&self.alpha0);
+        let beta = planar_hitpt_vector.dot(&self.beta0);
 
         if !(0.0..1.0).contains(&alpha) || !(0.0..1.0).contains(&beta) {
             return None;
         }
-
-        let front_face = ray.direction.dot(&self.normal) < 0.0;
-        let normal = if front_face {
-            self.normal
-        } else {
-            -self.normal
-        };
+        // Finally, we have a hit
+        let front_face = det < 0.0;
+        let normal = (2 * (front_face as isize) - 1) as f64 * self.normal;
         Some(HitRecord {
             p: intersection,
             t,
-            material: self.material.clone(),
+            material: Arc::clone(&self.material),
             normal,
             front_face,
             u: alpha,
