@@ -1,17 +1,15 @@
 use std::{io::stderr, sync::Arc};
 
-use image::ImageError;
+use ray1week::prelude::*;
+
 use ray1week::{
-    colour::Colour,
     material::{DiffuseLight, Lambertian},
-    objects::{Collection, Quad, Sphere},
-    render::Camera,
+    objects::{Quad, Sphere},
     texture::{NoiseTexture, SolidColour},
-    vec3::{Point3, Vec3},
 };
 
 fn main() -> Result<(), ImageError> {
-    let mut world = Collection::new();
+    let mut world = Scene::new();
     let marble = Arc::new(NoiseTexture::marble(4.0));
     let marble = Arc::new(Lambertian::from_texture(marble));
     let ground = Arc::new(NoiseTexture::plain(1.0));

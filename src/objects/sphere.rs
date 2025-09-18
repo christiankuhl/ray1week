@@ -4,6 +4,7 @@ use std::sync::Arc;
 use super::hittable::{HitRecord, Hittable, Interval};
 use crate::bounding_box::AaBb;
 use crate::material::Scatter;
+use crate::objects::Object;
 use crate::ray::Ray;
 use crate::vec3::{ONB, Point3, Vec3};
 
@@ -16,15 +17,15 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64, material: Arc<dyn Scatter>) -> Self {
+    pub fn new(center: Point3, radius: f64, material: Arc<dyn Scatter>) -> Object {
         let rvec = Vec3::new(radius, radius, radius);
         let bbox = AaBb::new(center - rvec, center + rvec);
-        Self {
+        Object::new(Arc::new(Self {
             center,
             radius,
             material,
             bbox,
-        }
+        }))
     }
 }
 
@@ -109,18 +110,23 @@ pub struct MovingSphere {
 }
 
 impl MovingSphere {
-    pub fn new(center1: Point3, center2: Point3, radius: f64, material: Arc<dyn Scatter>) -> Self {
+    pub fn new(
+        center1: Point3,
+        center2: Point3,
+        radius: f64,
+        material: Arc<dyn Scatter>,
+    ) -> Object {
         let center = Ray::new(center1, center2 - center1);
         let rvec = Vec3::new(radius, radius, radius);
         let box1 = AaBb::new(center1 - rvec, center1 + rvec);
         let box2 = AaBb::new(center2 - rvec, center2 + rvec);
         let bbox = AaBb::enclosing(&box1, &box2);
-        Self {
+        Object::new(Arc::new(Self {
             center,
             radius,
             material,
             bbox,
-        }
+        }))
     }
 }
 

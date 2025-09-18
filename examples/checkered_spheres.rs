@@ -1,17 +1,15 @@
 use std::{io::stderr, sync::Arc};
 
-use image::ImageError;
+use ray1week::prelude::*;
+
 use ray1week::{
-    colour::Colour,
     material::Lambertian,
-    objects::{Collection, Sphere},
-    render::Camera,
+    objects::Sphere,
     texture::{CheckerTexture, UVSlice},
-    vec3::{Point3, Vec3},
 };
 
 fn main() -> Result<(), ImageError> {
-    let mut world = Collection::new();
+    let mut world = Scene::new();
 
     let spatial_checker = Arc::new(CheckerTexture::solid(
         0.032,

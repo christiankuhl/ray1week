@@ -1,16 +1,11 @@
 use std::{io::stderr, sync::Arc};
 
-use image::ImageError;
-use ray1week::{
-    colour::Colour,
-    material::Lambertian,
-    objects::{Collection, Quad},
-    render::Camera,
-    vec3::{Point3, Vec3},
-};
+use ray1week::prelude::*;
+
+use ray1week::{material::Lambertian, objects::Quad};
 
 fn main() -> Result<(), ImageError> {
-    let mut world = Collection::new();
+    let mut world = Scene::new();
 
     // Materials
     let left_red = Arc::new(Lambertian::new(Colour::new(1.0, 0.2, 0.2)));

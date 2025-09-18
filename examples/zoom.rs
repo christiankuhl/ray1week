@@ -1,21 +1,20 @@
-use image::ImageError;
-use ray1week::colour::Colour;
-use ray1week::material::{Dielectric, Lambertian, Metal};
-use ray1week::objects::{Collection, Sphere};
-use ray1week::render::Camera;
-use ray1week::vec3::Point3;
+use std::{io::stderr, sync::Arc};
 
-use std::io::stderr;
-use std::sync::Arc;
+use ray1week::prelude::*;
+
+use ray1week::{
+    material::{Dielectric, Lambertian, Metal},
+    objects::Sphere,
+};
 
 fn main() -> Result<(), ImageError> {
     // Scene setup
+    let mut world = Scene::new();
     let material_ground = Arc::new(Lambertian::new(Colour::new(0.8, 0.8, 0.0)));
     let material_center = Arc::new(Lambertian::new(Colour::new(0.1, 0.2, 0.5)));
     let material_left = Arc::new(Dielectric::new(1.5));
     let air_bubble = Arc::new(Dielectric::new(1.0 / 1.5));
     let material_right = Arc::new(Metal::new(Colour::new(0.8, 0.6, 0.2), 0.1));
-    let mut world = Collection::new();
     world.add(Sphere::new(
         Point3::new(0.0, -100.5, -1.0),
         100.0,

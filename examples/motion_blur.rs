@@ -1,19 +1,16 @@
-use image::ImageError;
-use ray1week::colour::Colour;
+use std::{collections::HashMap, io::stderr, sync::Arc};
+
+use ray1week::prelude::*;
+
 use ray1week::material::Lambertian;
 use ray1week::material::{Dielectric, Metal, Scatter};
-use ray1week::objects::{Collection, MovingSphere, Sphere};
-use ray1week::render::Camera;
+use ray1week::objects::{MovingSphere, Sphere};
 use ray1week::texture::CheckerTexture;
-use ray1week::vec3::{Point3, Vec3};
-
-use std::collections::HashMap;
-use std::io::stderr;
-use std::sync::Arc;
 
 const BOUNDARY: i32 = 11;
 
 fn main() -> Result<(), ImageError> {
+    let mut world = Scene::new();
     let mut materials: Vec<Arc<dyn Scatter>> = Vec::new();
     let checker = Arc::new(CheckerTexture::solid(
         0.32,
@@ -24,7 +21,6 @@ fn main() -> Result<(), ImageError> {
     let material1 = Arc::new(Dielectric::new(1.5));
     let material2 = Arc::new(Lambertian::new(Colour::new(0.4, 0.2, 0.1)));
     let material3 = Arc::new(Metal::new(Colour::new(0.7, 0.6, 0.5), 0.0));
-    let mut world = Collection::new();
     world.add(Sphere::new(
         Point3::new(0.0, -1000.0, 0.0),
         1000.0,

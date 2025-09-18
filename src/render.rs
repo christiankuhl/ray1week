@@ -12,9 +12,10 @@ use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use crate::bounding_box::BVHNode;
 use crate::colour::Colour;
 use crate::material::ScatterResult;
-use crate::objects::{Collection, Hittable, Interval, sphere_uv};
+use crate::objects::{Hittable, Interval, sphere_uv};
 use crate::random::{DirectionalPDF, HittablePDF, MixturePDF, random_unit_disk};
 use crate::ray::Ray;
+use crate::scene::Scene;
 use crate::texture::{SkyTexture, Texture};
 use crate::vec3::{Point3, Vec3};
 
@@ -138,7 +139,7 @@ impl Renderer {
         self.center + p.x * self.defocus_disk_u + p.y * self.defocus_disk_v
     }
 
-    fn render_block(&self, block: &mut ImageBlock, world: &BVHNode, lights: Arc<Collection>) {
+    fn render_block(&self, block: &mut ImageBlock, world: &BVHNode, lights: Arc<Scene>) {
         let pixel_samples_scale = 1.0 / (self.sqrt_spp * self.sqrt_spp) as f64;
         for y in block.ymin..block.ymax {
             for x in block.xmin..block.xmax {
@@ -161,16 +162,17 @@ impl Renderer {
         }
     }
 
-    pub fn render<F, P>(&self, world: &mut Collection, path: F, p: &mut P) -> Result<(), ImageError>
+    pub fn render<F, P>(&self, world: &mut Scene, path: F, p: &mut P) -> Result<(), ImageError>
     where
         F: AsRef<Path> + Display,
         P: Write + Sync + Send,
     {
         let p = Arc::new(Mutex::new(p));
         writeln!(p.lock().unwrap(), "Collecting light sources...").unwrap();
-        let lights = Arc::new(Collection::with_objects(world.lights()));
+        let lights = Arc::new(Scene::with_objects(world.lights()));
         writeln!(p.lock().unwrap(), "Building render node hierarchy...").unwrap();
-        let bvh = BVHNode::new(&mut world.objects);
+        let mut raw_objects = world.objects().iter().map(|o| Arc::clone(o)).collect();
+        let bvh = BVHNode::new(&mut raw_objects);
         let mut blocks = self.image_blocks();
         writeln!(
             p.lock().unwrap(),
@@ -230,7 +232,7 @@ impl Renderer {
 fn ray_colour<'a>(
     ray: Ray,
     world: &'a BVHNode,
-    lights: Arc<Collection<'a>>,
+    lights: Arc<Scene>,
     depth: usize,
     background: Arc<dyn Texture + 'a>,
 ) -> Colour {
@@ -246,7 +248,7 @@ fn ray_colour<'a>(
                         .attenuate(&scatter.attenuation)
                 }
                 ScatterResult::PDF(pdf) => {
-                    let mixture = if !lights.objects.is_empty() {
+                    let mixture = if !lights.objects().is_empty() {
                         let lights_ptr = Arc::clone(&lights);
                         let light_pdf = HittablePDF::new(lights_ptr, rec.p);
                         MixturePDF::new(Arc::new(light_pdf), pdf)

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     bounding_box::AaBb,
     material::Scatter,
-    objects::{HitRecord, Hittable, Interval},
+    objects::{HitRecord, Hittable, Interval, Object},
     ray::Ray,
     vec3::{Point3, Vec3},
 };
@@ -25,7 +25,7 @@ pub struct Quad {
 }
 
 impl Quad {
-    pub fn new(q: Point3, u: Vec3, v: Vec3, material: Arc<dyn Scatter>) -> Self {
+    pub fn new(q: Point3, u: Vec3, v: Vec3, material: Arc<dyn Scatter>) -> Object {
         let box1 = AaBb::new(q, q + u + v);
         let box2 = AaBb::new(q + u, q + v);
         let bbox = AaBb::enclosing(&box1, &box2);
@@ -37,7 +37,7 @@ impl Quad {
         let intercept = normal.dot(&q);
         let area = n.length();
 
-        Self {
+        Object::new(Arc::new(Self {
             q,
             u,
             v,
@@ -48,7 +48,7 @@ impl Quad {
             normal,
             intercept,
             area,
-        }
+        }))
     }
 }
 

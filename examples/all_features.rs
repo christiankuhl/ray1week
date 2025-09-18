@@ -1,14 +1,12 @@
 use std::{io::stderr, sync::Arc};
 
-use image::ImageError;
+use ray1week::prelude::*;
+
 use ray1week::{
-    colour::Colour,
     material::{Dielectric, DiffuseLight, Lambertian, Metal},
-    objects::{Collection, Cube, MovingSphere, Quad, Sphere},
-    render::Camera,
+    objects::{Cube, MovingSphere, Quad, Sphere},
     texture::{ImageTexture, NoiseTexture, SolidColour},
     transform::{Rotate, Translate},
-    vec3::{Point3, Vec3},
     volumetrics::ConstantMedium,
 };
 
@@ -32,7 +30,7 @@ fn main() -> Result<(), ImageError> {
             ));
         }
     }
-    let mut world = Collection::new();
+    let mut world = Scene::new();
     world.add(boxes1);
 
     let light = Arc::new(DiffuseLight::from_colour(7.0 * Colour::WHITE));
@@ -66,13 +64,13 @@ fn main() -> Result<(), ImageError> {
     );
     world.add(boundary.clone());
     world.add(ConstantMedium::isotropic(
-        Arc::new(boundary),
+        boundary.clone(),
         0.2,
         Colour::new(0.2, 0.4, 0.9),
     ));
     let boundary = Sphere::new(Point3::ZERO, 5000.0, Arc::new(Dielectric::new(1.5)));
     world.add(ConstantMedium::isotropic(
-        Arc::new(boundary),
+        boundary.clone(),
         0.0001,
         Colour::WHITE,
     ));
@@ -96,7 +94,7 @@ fn main() -> Result<(), ImageError> {
     }
 
     world.add(Translate::new(
-        Arc::new(Rotate::new(Arc::new(boxes2), 0.0, 15.0, 0.0)),
+        Rotate::new(boxes2, 0.0, 15.0, 0.0),
         Vec3::new(-100.0, 270.0, 395.0),
     ));
 
@@ -111,6 +109,6 @@ fn main() -> Result<(), ImageError> {
         ..Camera::default()
     };
 
-    let renderer = cam.renderer(1000, 50);
-    renderer.render(&mut world, "all_features.png", &mut stderr())
+    let renderer = cam.renderer(10, 50);
+    renderer.render(&mut world, "all_features_test.png", &mut stderr())
 }

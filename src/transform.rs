@@ -2,30 +2,34 @@ use std::sync::Arc;
 
 use crate::{
     bounding_box::AaBb,
-    objects::{HitRecord, Hittable, Interval},
+    objects::{Collection, HitRecord, Hittable, Interval, IntoPrimitives, Object},
     ray::Ray,
     vec3::{Mat3, Point3, Vec3},
 };
 
-#[derive(Debug)]
-pub struct Translate<'a> {
-    object: Arc<dyn Hittable + 'a>,
-    offset: Vec3,
-    bbox: AaBb,
+#[derive(Debug, Clone)]
+pub struct Translate {
+    pub object: Object,
+    pub offset: Vec3,
+    pub bbox: AaBb,
 }
 
-impl<'a> Translate<'a> {
-    pub fn new(object: Arc<dyn Hittable + 'a>, offset: Vec3) -> Self {
-        let bbox = object.bbox() + offset;
-        Self {
-            object,
-            offset,
-            bbox,
+impl Translate {
+    pub fn new(object: impl IntoPrimitives, offset: Vec3) -> Collection {
+        let mut result = Collection::new();
+        for obj in object.primitives() {
+            let bbox = obj.bbox() + offset;
+            result.add(Object(Arc::new(Self {
+                object: obj,
+                offset,
+                bbox,
+            })));
         }
+        result
     }
 }
 
-impl<'a> Hittable for Translate<'a> {
+impl Hittable for Translate {
     fn bbox(&self) -> AaBb {
         self.bbox
     }
@@ -47,48 +51,41 @@ impl<'a> Hittable for Translate<'a> {
     }
 
     fn lights(&self) -> Vec<Arc<dyn Hittable>> {
-        let lights = self.object.lights();
-        let mut result: Vec<Arc<dyn Hittable>> = vec![];
-        for light in lights {
-            result.push(Arc::new(Translate::new(light, self.offset)));
-        }
-        result
+        let lights = Translate::new(Collection::with_objects(self.object.lights()), self.offset);
+        lights.objects.iter().map(|o| Arc::clone(&o.0)).collect()
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Rotate {
-    object: Arc<dyn Hittable>,
+    object: Object,
     mat: Mat3,
     mat_t: Mat3,
     bbox: AaBb,
 }
 
 impl Rotate {
-    pub fn new(object: Arc<dyn Hittable>, x: f64, y: f64, z: f64) -> Self {
+    pub fn new(object: impl IntoPrimitives, x: f64, y: f64, z: f64) -> Collection {
         let mat = Mat3::rotation(x, y, z);
-        let bbox = Self::bbox_rotate(object.clone(), mat);
-
-        Self {
-            object,
-            mat,
-            mat_t: mat.transpose(),
-            bbox,
-        }
+        Self::from_matrix(object, mat)
     }
 
-    pub fn from_matrix(object: Arc<dyn Hittable>, matrix: Mat3) -> Self {
-        let bbox = Self::bbox_rotate(object.clone(), matrix);
-
-        Self {
-            object,
-            mat: matrix,
-            mat_t: matrix.transpose(),
-            bbox,
+    fn from_matrix(object: impl IntoPrimitives, mat: Mat3) -> Collection {
+        let mut result = Collection::new();
+        let mat_t = mat.transpose();
+        for obj in object.primitives() {
+            let bbox = Self::bbox_rotate(obj.clone(), mat);
+            result.add(Object(Arc::new(Self {
+                object: obj,
+                mat,
+                mat_t,
+                bbox,
+            })));
         }
+        result
     }
 
-    fn bbox_rotate(object: Arc<dyn Hittable>, matrix: Mat3) -> AaBb {
+    fn bbox_rotate(object: Object, matrix: Mat3) -> AaBb {
         let mut min = Point3::new(f64::INFINITY, f64::INFINITY, f64::INFINITY);
         let mut max = Point3::new(-f64::INFINITY, -f64::INFINITY, -f64::INFINITY);
         let bbox = object.bbox();
@@ -142,11 +139,7 @@ impl Hittable for Rotate {
         self.mat * self.object.random(&(self.mat_t * (*origin)))
     }
     fn lights(&self) -> Vec<Arc<dyn Hittable>> {
-        let lights = self.object.lights();
-        let mut result: Vec<Arc<dyn Hittable>> = vec![];
-        for light in lights {
-            result.push(Arc::new(Rotate::from_matrix(light, self.mat)));
-        }
-        result
+        let lights = Rotate::from_matrix(Collection::with_objects(self.object.lights()), self.mat);
+        lights.objects.iter().map(|o| Arc::clone(&o.0)).collect()
     }
 }

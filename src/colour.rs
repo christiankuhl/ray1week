@@ -134,3 +134,5 @@ impl Div<f64> for Colour {
         }
     }
 }
+
+pub type Color = Colour;

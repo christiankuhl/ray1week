@@ -1,18 +1,16 @@
 use std::{io::stderr, sync::Arc};
 
-use image::ImageError;
+use ray1week::prelude::*;
+
 use ray1week::{
-    colour::Colour,
     material::{Dielectric, DiffuseLight, Lambertian, Metal},
-    objects::{Collection, Cube, Quad, Sphere},
-    render::Camera,
+    objects::{Cube, Quad, Sphere},
     texture::SolidColour,
     transform::{Rotate, Translate},
-    vec3::{Point3, Vec3},
 };
 
 fn main() -> Result<(), ImageError> {
-    let mut world = Collection::new();
+    let mut world = Scene::new();
 
     let red = Arc::new(Lambertian::new(Colour::new(0.65, 0.05, 0.05)));
     let white = Arc::new(Lambertian::new(Colour::new(0.73, 0.73, 0.73)));
@@ -58,12 +56,8 @@ fn main() -> Result<(), ImageError> {
         white.clone(),
     ));
 
-    let box1 = Arc::new(Cube::new(
-        Point3::ZERO,
-        Point3::new(165.0, 330.0, 165.0),
-        aluminium,
-    ));
-    let box1 = Arc::new(Rotate::new(box1, 0.0, 15.0, 0.0));
+    let box1 = Cube::new(Point3::ZERO, Point3::new(165.0, 330.0, 165.0), aluminium);
+    let box1 = Rotate::new(box1, 0.0, 15.0, 0.0);
     let box1 = Translate::new(box1, Vec3::new(265.0, 0.0, 295.0));
     world.add(box1);
 

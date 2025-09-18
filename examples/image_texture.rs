@@ -1,16 +1,11 @@
 use std::{io::stderr, sync::Arc};
 
-use image::ImageError;
-use ray1week::{
-    material::Lambertian,
-    objects::{Collection, Sphere},
-    render::Camera,
-    texture::ImageTexture,
-    vec3::{Point3, Vec3},
-};
+use ray1week::prelude::*;
+
+use ray1week::{material::Lambertian, objects::Sphere, texture::ImageTexture};
 
 fn main() -> Result<(), ImageError> {
-    let mut world = Collection::new();
+    let mut world = Scene::new();
 
     let map = Arc::new(ImageTexture::new("examples/resources/earthmap.jpg").unwrap());
     let material = Arc::new(Lambertian::from_texture(map));

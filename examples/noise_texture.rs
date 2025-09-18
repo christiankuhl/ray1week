@@ -1,16 +1,11 @@
 use std::{io::stderr, sync::Arc};
 
-use image::ImageError;
-use ray1week::{
-    material::Lambertian,
-    objects::{Collection, Sphere},
-    render::Camera,
-    texture::NoiseTexture,
-    vec3::{Point3, Vec3},
-};
+use ray1week::prelude::*;
+
+use ray1week::{material::Lambertian, objects::Sphere, texture::NoiseTexture};
 
 fn main() -> Result<(), ImageError> {
-    let mut world = Collection::new();
+    let mut world = Scene::new();
 
     let ground = Arc::new(NoiseTexture::plain(4.0));
     let ground = Arc::new(Lambertian::from_texture(ground));
