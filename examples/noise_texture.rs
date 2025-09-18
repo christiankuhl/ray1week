@@ -33,5 +33,9 @@ fn main() -> Result<(), ImageError> {
 
     let renderer = cam.renderer(100, 50);
 
-    renderer.render(&mut world, "perlin_spheres.png", &mut stderr())
+    renderer.render(
+        &mut world,
+        "examples/output/perlin_spheres.png",
+        &mut stderr(),
+    )
 }

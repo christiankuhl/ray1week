@@ -38,5 +38,5 @@ fn main() -> Result<(), ImageError> {
 
     // Render to file
     let renderer = camera.renderer(100, 10);
-    renderer.render(&mut world, "basic.png", &mut stderr())
+    renderer.render(&mut world, "examples/output/basic.png", &mut stderr())
 }

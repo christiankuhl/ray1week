@@ -25,5 +25,5 @@ fn main() -> Result<(), ImageError> {
 
     let renderer = cam.renderer(100, 50);
 
-    renderer.render(&mut world, "globe.png", &mut stderr())
+    renderer.render(&mut world, "examples/output/globe.png", &mut stderr())
 }

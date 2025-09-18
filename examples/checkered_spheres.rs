@@ -39,5 +39,9 @@ fn main() -> Result<(), ImageError> {
 
     let renderer = cam.renderer(100, 50);
 
-    renderer.render(&mut world, "checkered_spheres.png", &mut stderr())
+    renderer.render(
+        &mut world,
+        "examples/output/checkered_spheres.png",
+        &mut stderr(),
+    )
 }

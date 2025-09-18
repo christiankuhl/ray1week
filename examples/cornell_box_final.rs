@@ -75,5 +75,9 @@ fn main() -> Result<(), ImageError> {
     };
 
     let renderer = cam.renderer(1000, 50);
-    renderer.render(&mut world, "cornell_box_final.png", &mut stderr())
+    renderer.render(
+        &mut world,
+        "examples/output/cornell_box_final.png",
+        &mut stderr(),
+    )
 }

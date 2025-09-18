@@ -38,5 +38,9 @@ fn main() -> Result<(), ImageError> {
     };
 
     let renderer = cam.renderer(100, 50);
-    renderer.render(&mut world, "diffuse_light.png", &mut stderr())
+    renderer.render(
+        &mut world,
+        "examples/output/diffuse_light.png",
+        &mut stderr(),
+    )
 }

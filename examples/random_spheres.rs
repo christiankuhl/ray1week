@@ -44,7 +44,11 @@ fn main() -> Result<(), ImageError> {
     };
 
     let renderer = cam.renderer(50, 50);
-    renderer.render(&mut world, "random_spheres.png", &mut stderr())
+    renderer.render(
+        &mut world,
+        "examples/output/random_spheres.png",
+        &mut stderr(),
+    )
 }
 
 fn make_random_spheres(materials: &mut Vec<Arc<dyn Scatter>>, centers: &mut Vec<Point3>) {
