@@ -1,19 +1,19 @@
-use std::{io::stderr, sync::Arc};
+use std::io::stderr;
 
 use ray1week::prelude::*;
 
 use ray1week::{
-    material::{Dielectric, Lambertian, Metal, Scatter},
+    material::{Dielectric, Lambertian, Material, Metal},
     objects::Sphere,
 };
 
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
-    let mut materials: Vec<Arc<dyn Scatter>> = Vec::new();
-    let ground_material = Arc::new(Lambertian::new(Colour::new(0.5, 0.5, 0.5)));
-    let material1 = Arc::new(Dielectric::new(1.5));
-    let material2 = Arc::new(Lambertian::new(Colour::new(0.4, 0.2, 0.1)));
-    let material3 = Arc::new(Metal::new(Colour::new(0.7, 0.6, 0.5), 0.0));
+    let mut materials: Vec<Material> = Vec::new();
+    let ground_material = Lambertian::new(Colour::new(0.5, 0.5, 0.5));
+    let material1 = Dielectric::new(1.5);
+    let material2 = Lambertian::new(Colour::new(0.4, 0.2, 0.1));
+    let material3 = Metal::new(Colour::new(0.7, 0.6, 0.5), 0.0);
 
     world.add(Sphere::new(
         Point3::new(0.0, -1000.0, 0.0),
@@ -51,7 +51,7 @@ fn main() -> Result<(), ImageError> {
     )
 }
 
-fn make_random_spheres(materials: &mut Vec<Arc<dyn Scatter>>, centers: &mut Vec<Point3>) {
+fn make_random_spheres(materials: &mut Vec<Material>, centers: &mut Vec<Point3>) {
     for a in -11..11 {
         for b in -11..11 {
             let choose_mat = fastrand::f64();
@@ -65,7 +65,7 @@ fn make_random_spheres(materials: &mut Vec<Arc<dyn Scatter>>, centers: &mut Vec<
                 if choose_mat < 0.8 {
                     // diffuse
                     let albedo = Colour::random().attenuate(&Colour::random());
-                    materials.push(Arc::new(Lambertian::new(albedo)));
+                    materials.push(Lambertian::new(albedo));
                 } else if choose_mat < 0.95 {
                     // metal
                     let albedo = Colour::new(
@@ -74,10 +74,10 @@ fn make_random_spheres(materials: &mut Vec<Arc<dyn Scatter>>, centers: &mut Vec<
                         fastrand::f64() / 2.0 + 0.5,
                     );
                     let fuzz = 0.5 * fastrand::f64();
-                    materials.push(Arc::new(Metal::new(albedo, fuzz)));
+                    materials.push(Metal::new(albedo, fuzz));
                 } else {
                     // glass
-                    materials.push(Arc::new(Dielectric::new(1.5)));
+                    materials.push(Dielectric::new(1.5));
                 }
                 centers.push(center);
             }

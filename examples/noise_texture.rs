@@ -8,13 +8,13 @@ fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
 
     let ground = Arc::new(NoiseTexture::plain(4.0));
-    let ground = Arc::new(Lambertian::from_texture(ground));
+    let ground = Lambertian::from_texture(ground);
 
     let marble = Arc::new(NoiseTexture::marble(4.0));
-    let marble = Arc::new(Lambertian::from_texture(marble));
+    let marble = Lambertian::from_texture(marble);
 
     let turbulence = Arc::new(NoiseTexture::turbulence(1.0, 7));
-    let turbulence = Arc::new(Lambertian::from_texture(turbulence));
+    let turbulence = Lambertian::from_texture(turbulence);
 
     world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground));
     world.add(Sphere::new(Point3::new(0.0, 2.0, -2.5), 2.0, marble));

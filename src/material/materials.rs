@@ -3,30 +3,12 @@ use std::{f64::consts::PI, sync::Arc};
 use crate::{
     colour::Colour,
     linalg::{Point3, Vec3},
+    material::{Material, Scatter, ScatterRecord, ScatterResult},
     objects::HitRecord,
-    random::{CosinePDF, DirectionalPDF, UniformSphericalPDF, random_unit_vector},
+    random::{CosinePDF, UniformSphericalPDF, random_unit_vector},
     ray::Ray,
     texture::{SolidColour, Texture},
 };
-
-#[derive(Clone)]
-pub struct ScatterRecord {
-    pub attenuation: Colour,
-    pub scattered: ScatterResult,
-}
-
-#[derive(Clone)]
-pub enum ScatterResult {
-    PDF(Arc<dyn DirectionalPDF>),
-    SpecularRay(Ray),
-}
-
-pub trait Scatter: std::fmt::Debug + Send + Sync {
-    fn scatter(&self, ray: Ray, hit: &HitRecord) -> Option<ScatterRecord>;
-    fn emit(&self, hit: &HitRecord, u: f64, v: f64, p: Point3) -> Colour;
-    fn scattering_pdf(&self, ray: Ray, hit: &HitRecord, scattered: Ray) -> f64;
-    fn is_emissive(&self) -> bool;
-}
 
 #[derive(Debug, Clone)]
 pub struct Lambertian {
@@ -34,14 +16,14 @@ pub struct Lambertian {
 }
 
 impl Lambertian {
-    pub fn new(albedo: Colour) -> Self {
-        Self {
+    pub fn new(albedo: Colour) -> Material {
+        Material::new(Arc::new(Self {
             texture: Arc::new(SolidColour::new(albedo)),
-        }
+        }))
     }
 
-    pub fn from_texture(texture: Arc<dyn Texture>) -> Self {
-        Self { texture }
+    pub fn from_texture(texture: Arc<dyn Texture>) -> Material {
+        Material::new(Arc::new(Self { texture }))
     }
 }
 
@@ -74,8 +56,8 @@ pub struct Metal {
 }
 
 impl Metal {
-    pub fn new(albedo: Colour, fuzz: f64) -> Self {
-        Self { albedo, fuzz }
+    pub fn new(albedo: Colour, fuzz: f64) -> Material {
+        Material::new(Arc::new(Self { albedo, fuzz }))
     }
 }
 
@@ -108,8 +90,8 @@ pub struct Dielectric {
 }
 
 impl Dielectric {
-    pub fn new(refraction_index: f64) -> Self {
-        Self { refraction_index }
+    pub fn new(refraction_index: f64) -> Material {
+        Material::new(Arc::new(Self { refraction_index }))
     }
 }
 
@@ -156,14 +138,12 @@ pub struct DiffuseLight {
 }
 
 impl DiffuseLight {
-    pub fn new(texture: Arc<dyn Texture>) -> Self {
-        Self { texture }
+    pub fn new(texture: Arc<dyn Texture>) -> Material {
+        Material::new(Arc::new(Self { texture }))
     }
 
-    pub fn from_colour(albedo: Colour) -> Self {
-        Self {
-            texture: Arc::new(SolidColour::new(albedo)),
-        }
+    pub fn from_colour(albedo: Colour) -> Material {
+        Self::new(Arc::new(SolidColour::new(albedo)))
     }
 }
 
@@ -208,8 +188,8 @@ pub struct Isotropic {
 }
 
 impl Isotropic {
-    pub fn new(texture: Arc<dyn Texture>) -> Self {
-        Self { texture }
+    pub fn new(texture: Arc<dyn Texture>) -> Material {
+        Material::new(Arc::new(Self { texture }))
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{io::stderr, sync::Arc};
+use std::io::stderr;
 
 use ray1week::prelude::*;
 
@@ -8,11 +8,11 @@ fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
 
     // Materials
-    let left_red = Arc::new(Lambertian::new(Colour::new(1.0, 0.2, 0.2)));
-    let back_green = Arc::new(Lambertian::new(Colour::new(0.2, 1.0, 0.2)));
-    let right_blue = Arc::new(Lambertian::new(Colour::new(0.2, 0.2, 1.0)));
-    let upper_orange = Arc::new(Lambertian::new(Colour::new(1.0, 0.5, 0.0)));
-    let lower_teal = Arc::new(Lambertian::new(Colour::new(0.2, 0.8, 0.8)));
+    let left_red = Lambertian::new(Colour::new(1.0, 0.2, 0.2));
+    let back_green = Lambertian::new(Colour::new(0.2, 1.0, 0.2));
+    let right_blue = Lambertian::new(Colour::new(0.2, 0.2, 1.0));
+    let upper_orange = Lambertian::new(Colour::new(1.0, 0.5, 0.0));
+    let lower_teal = Lambertian::new(Colour::new(0.2, 0.8, 0.8));
 
     // Quads
     world.add(Quad::new(

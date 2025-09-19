@@ -1,18 +1,19 @@
 use std::fmt::Debug;
 use std::ops::Add;
-use std::sync::Arc;
 
-use crate::bounding_box::AaBb;
-use crate::linalg::{Point3, Vec3};
-use crate::material::Scatter;
-use crate::objects::Collection;
-use crate::ray::Ray;
+use crate::{
+    bounding_box::AaBb,
+    linalg::{Point3, Vec3},
+    material::Material,
+    objects::Collection,
+    ray::Ray,
+};
 
 #[derive(Debug)]
 pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
-    pub material: Arc<dyn Scatter>,
+    pub material: Material,
     pub t: f64,
     pub u: f64,
     pub v: f64,

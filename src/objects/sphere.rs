@@ -5,7 +5,7 @@ use super::hittable::{HitRecord, Hittable, Interval};
 use crate::{
     bounding_box::AaBb,
     linalg::{ONB, Point3, Vec3},
-    material::Scatter,
+    material::Material,
     objects::{Collection, Object},
     ray::Ray,
 };
@@ -14,12 +14,12 @@ use crate::{
 pub struct Sphere {
     center: Point3,
     radius: f64,
-    material: Arc<dyn Scatter>,
+    material: Material,
     bbox: AaBb,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64, material: Arc<dyn Scatter>) -> Object {
+    pub fn new(center: Point3, radius: f64, material: Material) -> Object {
         let rvec = Vec3::new(radius, radius, radius);
         let bbox = AaBb::new(center - rvec, center + rvec);
         Object::new(Arc::new(Self {
@@ -107,17 +107,12 @@ impl Hittable for Sphere {
 pub struct MovingSphere {
     center: Ray,
     radius: f64,
-    material: Arc<dyn Scatter>,
+    material: Material,
     bbox: AaBb,
 }
 
 impl MovingSphere {
-    pub fn new(
-        center1: Point3,
-        center2: Point3,
-        radius: f64,
-        material: Arc<dyn Scatter>,
-    ) -> Object {
+    pub fn new(center1: Point3, center2: Point3, radius: f64, material: Material) -> Object {
         let center = Ray::new(center1, center2 - center1);
         let rvec = Vec3::new(radius, radius, radius);
         let box1 = AaBb::new(center1 - rvec, center1 + rvec);

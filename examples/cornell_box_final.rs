@@ -12,11 +12,11 @@ use ray1week::{
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
 
-    let red = Arc::new(Lambertian::new(Colour::new(0.65, 0.05, 0.05)));
-    let white = Arc::new(Lambertian::new(Colour::new(0.73, 0.73, 0.73)));
-    let green = Arc::new(Lambertian::new(Colour::new(0.12, 0.45, 0.15)));
-    let light = Arc::new(DiffuseLight::from_colour(Colour::new(15.0, 15.0, 15.0)));
-    let aluminium = Arc::new(Metal::new(Colour::new(0.8, 0.85, 0.88), 0.0));
+    let red = Lambertian::new(Colour::new(0.65, 0.05, 0.05));
+    let white = Lambertian::new(Colour::new(0.73, 0.73, 0.73));
+    let green = Lambertian::new(Colour::new(0.12, 0.45, 0.15));
+    let light = DiffuseLight::from_colour(Colour::new(15.0, 15.0, 15.0));
+    let aluminium = Metal::new(Colour::new(0.8, 0.85, 0.88), 0.0);
 
     world.add(Quad::new(
         Point3::new(555.0, 0.0, 0.0),
@@ -61,7 +61,7 @@ fn main() -> Result<(), ImageError> {
     let box1 = Translate::new(box1, Vec3::new(265.0, 0.0, 295.0));
     world.add(box1);
 
-    let glass = Arc::new(Dielectric::new(1.5));
+    let glass = Dielectric::new(1.5);
     world.add(Sphere::new(Point3::new(190.0, 90.0, 190.0), 90.0, glass));
 
     let cam = Camera {

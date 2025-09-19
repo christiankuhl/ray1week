@@ -8,7 +8,7 @@ fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
 
     let map = Arc::new(ImageTexture::new("examples/resources/earthmap.jpg").unwrap());
-    let material = Arc::new(Lambertian::from_texture(map));
+    let material = Lambertian::from_texture(map);
 
     world.add(Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, material));
 

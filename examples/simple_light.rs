@@ -11,14 +11,14 @@ use ray1week::{
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
     let marble = Arc::new(NoiseTexture::marble(4.0));
-    let marble = Arc::new(Lambertian::from_texture(marble));
+    let marble = Lambertian::from_texture(marble);
     let ground = Arc::new(NoiseTexture::plain(1.0));
-    let ground = Arc::new(Lambertian::from_texture(ground));
+    let ground = Lambertian::from_texture(ground);
 
     world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground));
     world.add(Sphere::new(Point3::new(0.0, 2.0, 0.0), 2.0, marble));
 
-    let difflight = Arc::new(DiffuseLight::from_colour(Colour::new(4.0, 4.0, 4.0)));
+    let difflight = DiffuseLight::from_colour(Colour::new(4.0, 4.0, 4.0));
     world.add(Quad::new(
         Point3::new(3.0, 1.0, -2.0),
         2.0 * Vec3::EX,

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     colour::Colour,
     linalg::{Point3, Vec3},
-    material::{Isotropic, Scatter},
+    material::{Isotropic, Material},
     objects::{Collection, HitRecord, Hittable, Interval, IntoPrimitives, Object},
     ray::Ray,
     texture::SolidColour,
@@ -13,21 +13,21 @@ use crate::{
 pub struct ConstantMedium {
     boundary: Object,
     neg_inv_density: f64,
-    phase_function: Arc<dyn Scatter>,
+    phase_function: Material,
 }
 
 impl ConstantMedium {
     pub fn new(
         boundary: impl IntoPrimitives,
         density: f64,
-        phase_function: Arc<dyn Scatter>,
+        phase_function: Material,
     ) -> Collection {
         let mut result = Collection::new();
         for bd in boundary.primitives() {
             result.add(Object::new(Arc::new(Self {
                 boundary: bd,
                 neg_inv_density: -1.0 / density,
-                phase_function: Arc::clone(&phase_function),
+                phase_function: phase_function.clone(),
             })));
         }
         result
@@ -37,7 +37,7 @@ impl ConstantMedium {
         Self::new(
             boundary,
             density,
-            Arc::new(Isotropic::new(Arc::new(SolidColour::new(albedo)))),
+            Isotropic::new(Arc::new(SolidColour::new(albedo))),
         )
     }
 }
@@ -77,7 +77,7 @@ impl Hittable for ConstantMedium {
                     p: ray.at(t),
                     normal: Vec3::EX,
                     front_face: true,
-                    material: Arc::clone(&self.phase_function),
+                    material: self.phase_function.clone(),
                     u: 0.0,
                     v: 0.0,
                 })

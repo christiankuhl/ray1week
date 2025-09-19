@@ -13,10 +13,10 @@ use ray1week::{
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
 
-    let red = Arc::new(Lambertian::new(Colour::new(0.65, 0.05, 0.05)));
-    let white = Arc::new(Lambertian::new(Colour::new(0.73, 0.73, 0.73)));
-    let green = Arc::new(Lambertian::new(Colour::new(0.12, 0.45, 0.15)));
-    let light = Arc::new(DiffuseLight::from_colour(Colour::new(7.0, 7.0, 7.0)));
+    let red = Lambertian::new(Colour::new(0.65, 0.05, 0.05));
+    let white = Lambertian::new(Colour::new(0.73, 0.73, 0.73));
+    let green = Lambertian::new(Colour::new(0.12, 0.45, 0.15));
+    let light = DiffuseLight::from_colour(Colour::new(7.0, 7.0, 7.0));
 
     world.add(Quad::new(
         Point3::new(555.0, 0.0, 0.0),

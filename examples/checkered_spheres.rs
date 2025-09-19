@@ -17,7 +17,7 @@ fn main() -> Result<(), ImageError> {
         Colour::new(0.9, 0.9, 0.9),
     ));
     let uv_checker = Arc::new(UVSlice::new(spatial_checker, 0.0));
-    let material = Arc::new(Lambertian::from_texture(uv_checker));
+    let material = Lambertian::from_texture(uv_checker);
 
     world.add(Sphere::new(
         Point3::new(0.0, -10.0, 0.0),

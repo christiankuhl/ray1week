@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use crate::{
     linalg::{Point3, Vec3},
-    material::Scatter,
+    material::Material,
     objects::{IntoPrimitives, Object, Quad},
 };
 
@@ -10,7 +8,7 @@ use crate::{
 pub struct Cube(Vec<Object>);
 
 impl Cube {
-    pub fn new(a: Point3, b: Point3, material: Arc<dyn Scatter>) -> Self {
+    pub fn new(a: Point3, b: Point3, material: Material) -> Self {
         let mut sides = Vec::new();
         let min = Point3::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z));
         let max = Point3::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z));

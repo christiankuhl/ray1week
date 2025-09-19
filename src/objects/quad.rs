@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     bounding_box::AaBb,
     linalg::{Point3, Vec3},
-    material::Scatter,
+    material::Material,
     objects::{Collection, HitRecord, Hittable, Interval, Object},
     ray::Ray,
 };
@@ -17,7 +17,7 @@ pub struct Quad {
     v: Vec3,
     alpha0: Vec3,
     beta0: Vec3,
-    material: Arc<dyn Scatter>,
+    material: Material,
     bbox: AaBb,
     normal: Vec3,
     intercept: f64,
@@ -25,7 +25,7 @@ pub struct Quad {
 }
 
 impl Quad {
-    pub fn new(q: Point3, u: Vec3, v: Vec3, material: Arc<dyn Scatter>) -> Object {
+    pub fn new(q: Point3, u: Vec3, v: Vec3, material: Material) -> Object {
         let box1 = AaBb::new(q, q + u + v);
         let box2 = AaBb::new(q + u, q + v);
         let bbox = AaBb::enclosing(&box1, &box2);
@@ -79,7 +79,7 @@ impl Hittable for Quad {
         Some(HitRecord {
             p: intersection,
             t,
-            material: Arc::clone(&self.material),
+            material: self.material.clone(),
             normal,
             front_face,
             u: alpha,
