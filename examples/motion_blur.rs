@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::stderr, sync::Arc};
+use std::{collections::HashMap, io::stderr};
 
 use ray1week::prelude::*;
 
@@ -14,11 +14,8 @@ const BOUNDARY: i32 = 11;
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
     let mut materials: Vec<Material> = Vec::new();
-    let checker = Arc::new(CheckerTexture::solid(
-        0.32,
-        Colour::new(0.2, 0.3, 0.1),
-        Colour::new(0.9, 0.9, 0.9),
-    ));
+    let checker =
+        CheckerTexture::solid(0.32, Colour::new(0.2, 0.3, 0.1), Colour::new(0.9, 0.9, 0.9));
     let ground_material = Lambertian::from_texture(checker);
     let material1 = Dielectric::new(1.5);
     let material2 = Lambertian::new(Colour::new(0.4, 0.2, 0.1));

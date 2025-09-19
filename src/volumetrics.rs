@@ -34,11 +34,7 @@ impl ConstantMedium {
     }
 
     pub fn isotropic(boundary: impl IntoPrimitives, density: f64, albedo: Colour) -> Collection {
-        Self::new(
-            boundary,
-            density,
-            Isotropic::new(Arc::new(SolidColour::new(albedo))),
-        )
+        Self::new(boundary, density, Isotropic::new(SolidColour::new(albedo)))
     }
 }
 

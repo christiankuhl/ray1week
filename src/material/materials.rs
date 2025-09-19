@@ -12,17 +12,17 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Lambertian {
-    texture: Arc<dyn Texture>,
+    texture: Texture,
 }
 
 impl Lambertian {
     pub fn new(albedo: Colour) -> Material {
         Material::new(Arc::new(Self {
-            texture: Arc::new(SolidColour::new(albedo)),
+            texture: SolidColour::new(albedo),
         }))
     }
 
-    pub fn from_texture(texture: Arc<dyn Texture>) -> Material {
+    pub fn from_texture(texture: Texture) -> Material {
         Material::new(Arc::new(Self { texture }))
     }
 }
@@ -134,16 +134,16 @@ impl Scatter for Dielectric {
 
 #[derive(Debug)]
 pub struct DiffuseLight {
-    texture: Arc<dyn Texture>,
+    texture: Texture,
 }
 
 impl DiffuseLight {
-    pub fn new(texture: Arc<dyn Texture>) -> Material {
+    pub fn new(texture: Texture) -> Material {
         Material::new(Arc::new(Self { texture }))
     }
 
     pub fn from_colour(albedo: Colour) -> Material {
-        Self::new(Arc::new(SolidColour::new(albedo)))
+        Self::new(SolidColour::new(albedo))
     }
 }
 
@@ -184,11 +184,11 @@ fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
 
 #[derive(Debug)]
 pub struct Isotropic {
-    texture: Arc<dyn Texture>,
+    texture: Texture,
 }
 
 impl Isotropic {
-    pub fn new(texture: Arc<dyn Texture>) -> Material {
+    pub fn new(texture: Texture) -> Material {
         Material::new(Arc::new(Self { texture }))
     }
 }

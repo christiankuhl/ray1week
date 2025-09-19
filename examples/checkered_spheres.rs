@@ -1,4 +1,4 @@
-use std::{io::stderr, sync::Arc};
+use std::io::stderr;
 
 use ray1week::prelude::*;
 
@@ -11,12 +11,12 @@ use ray1week::{
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
 
-    let spatial_checker = Arc::new(CheckerTexture::solid(
+    let spatial_checker = CheckerTexture::solid(
         0.032,
         Colour::new(0.2, 0.3, 0.1),
         Colour::new(0.9, 0.9, 0.9),
-    ));
-    let uv_checker = Arc::new(UVSlice::new(spatial_checker, 0.0));
+    );
+    let uv_checker = UVSlice::new(spatial_checker, 0.0);
     let material = Lambertian::from_texture(uv_checker);
 
     world.add(Sphere::new(

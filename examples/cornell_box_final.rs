@@ -1,4 +1,4 @@
-use std::{io::stderr, sync::Arc};
+use std::io::stderr;
 
 use ray1week::prelude::*;
 
@@ -67,7 +67,7 @@ fn main() -> Result<(), ImageError> {
     let cam = Camera {
         aspect_ratio: 1.0,
         image_width: 600,
-        background: Arc::new(SolidColour::new(Colour::BLACK)),
+        background: SolidColour::new(Colour::BLACK),
         vfov: 40.0,
         lookfrom: Point3::new(278.0, 278.0, -800.0),
         lookat: Point3::new(278.0, 278.0, 0.0),

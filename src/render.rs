@@ -29,7 +29,7 @@ pub struct Camera {
     pub focus_dist: f64,
     pub aspect_ratio: f64,
     pub image_width: usize,
-    pub background: Arc<dyn Texture>,
+    pub background: Texture,
 }
 
 pub struct Renderer {
@@ -44,7 +44,7 @@ pub struct Renderer {
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
     center: Point3,
-    background: Arc<dyn Texture>,
+    background: Texture,
 }
 
 impl Default for Camera {
@@ -58,7 +58,7 @@ impl Default for Camera {
             focus_dist: 10.0,
             aspect_ratio: 16.0 / 9.0,
             image_width: 400,
-            background: Arc::new(SkyTexture::default()),
+            background: SkyTexture::default(),
         }
     }
 }
@@ -152,7 +152,7 @@ impl Renderer {
                             world,
                             Arc::clone(&lights),
                             self.max_depth,
-                            Arc::clone(&self.background),
+                            self.background.clone(),
                         );
                     }
                 }
@@ -241,12 +241,12 @@ impl Renderer {
     }
 }
 
-fn ray_colour<'a>(
+fn ray_colour(
     ray: Ray,
-    world: &'a BVHNode,
+    world: &BVHNode,
     lights: Arc<Scene>,
     depth: usize,
-    background: Arc<dyn Texture + 'a>,
+    background: Texture,
 ) -> Colour {
     if depth == 0 {
         return Colour::BLACK;

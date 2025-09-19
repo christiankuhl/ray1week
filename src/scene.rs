@@ -7,6 +7,7 @@ use crate::ray::Ray;
 pub struct Scene(Collection);
 
 impl Scene {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self(Collection::new())
     }

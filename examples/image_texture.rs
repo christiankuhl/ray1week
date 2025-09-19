@@ -1,4 +1,4 @@
-use std::{io::stderr, sync::Arc};
+use std::io::stderr;
 
 use ray1week::prelude::*;
 
@@ -7,7 +7,7 @@ use ray1week::{material::Lambertian, objects::Sphere, texture::ImageTexture};
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
 
-    let map = Arc::new(ImageTexture::new("examples/resources/earthmap.jpg").unwrap());
+    let map = ImageTexture::new("examples/resources/earthmap.jpg").unwrap();
     let material = Lambertian::from_texture(map);
 
     world.add(Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, material));

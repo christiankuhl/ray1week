@@ -1,4 +1,4 @@
-use std::{io::stderr, sync::Arc};
+use std::io::stderr;
 
 use ray1week::prelude::*;
 
@@ -10,9 +10,9 @@ use ray1week::{
 
 fn main() -> Result<(), ImageError> {
     let mut world = Scene::new();
-    let marble = Arc::new(NoiseTexture::marble(4.0));
+    let marble = NoiseTexture::marble(4.0);
     let marble = Lambertian::from_texture(marble);
-    let ground = Arc::new(NoiseTexture::plain(1.0));
+    let ground = NoiseTexture::plain(1.0);
     let ground = Lambertian::from_texture(ground);
 
     world.add(Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0, ground));
@@ -30,7 +30,7 @@ fn main() -> Result<(), ImageError> {
     let cam = Camera {
         aspect_ratio: 16.0 / 9.0,
         image_width: 400,
-        background: Arc::new(SolidColour::new(Colour::BLACK)),
+        background: SolidColour::new(Colour::BLACK),
         vfov: 20.0,
         lookfrom: Point3::new(26.0, 3.0, 6.0),
         lookat: Point3::new(0.0, 2.0, 0.0),

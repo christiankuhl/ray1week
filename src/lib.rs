@@ -1,5 +1,4 @@
 #![allow(clippy::new_ret_no_self)]
-#![allow(clippy::new_without_default)]
 
 mod bounding_box;
 pub mod colour;

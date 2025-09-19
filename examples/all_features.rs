@@ -1,4 +1,4 @@
-use std::{io::stderr, sync::Arc};
+use std::io::stderr;
 
 use ray1week::prelude::*;
 
@@ -71,11 +71,10 @@ fn main() -> Result<(), ImageError> {
         Colour::WHITE,
     ));
 
-    let emat = Lambertian::from_texture(Arc::new(
-        ImageTexture::new("examples/resources/earthmap.jpg").unwrap(),
-    ));
+    let emat =
+        Lambertian::from_texture(ImageTexture::new("examples/resources/earthmap.jpg").unwrap());
     world.add(Sphere::new(Point3::new(400.0, 200.0, 400.0), 100.0, emat));
-    let pertext = Arc::new(NoiseTexture::plain(0.2));
+    let pertext = NoiseTexture::plain(0.2);
     world.add(Sphere::new(
         Point3::new(220.0, 280.0, 300.0),
         80.0,
@@ -97,7 +96,7 @@ fn main() -> Result<(), ImageError> {
     let cam = Camera {
         aspect_ratio: 1.0,
         image_width: 800,
-        background: Arc::new(SolidColour::new(Colour::BLACK)),
+        background: SolidColour::new(Colour::BLACK),
         vfov: 40.0,
         lookfrom: Point3::new(478.0, 278.0, -600.0),
         lookat: Point3::new(278.0, 278.0, 0.0),
