@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::bounding_box::AaBb;
 use crate::material::Scatter;
+use crate::objects::Collection;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
@@ -89,5 +90,5 @@ pub trait Hittable: Debug + Send + Sync {
     fn bbox(&self) -> AaBb;
     fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64;
     fn random(&self, origin: &Point3) -> Vec3;
-    fn lights(&self) -> Vec<Arc<dyn Hittable>>;
+    fn lights(&self) -> Collection;
 }

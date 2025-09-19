@@ -95,11 +95,11 @@ impl Hittable for ConstantMedium {
     fn random(&self, _origin: &Point3) -> Vec3 {
         Vec3::EX
     }
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+    fn lights(&self) -> Collection {
+        let mut res = Collection::new();
         if self.phase_function.is_emissive() {
-            vec![Arc::new(self.clone())]
-        } else {
-            vec![]
+            res.add(Object::new(Arc::new(self.clone())));
         }
+        res
     }
 }

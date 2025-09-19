@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::bounding_box::AaBb;
 use crate::objects::{Collection, HitRecord, Hittable, Interval, IntoPrimitives, Object};
 use crate::ray::Ray;
@@ -12,8 +10,8 @@ impl Scene {
     pub fn new() -> Self {
         Self(Collection::new())
     }
-    pub fn with_objects(objects: Vec<Arc<dyn Hittable>>) -> Self {
-        Self(Collection::with_objects(objects))
+    pub fn with_objects(objects: Collection) -> Self {
+        Self(Collection::with_objects(objects.objects))
     }
     pub fn add(&mut self, object: impl IntoPrimitives) {
         for obj in object.primitives() {
@@ -55,7 +53,8 @@ impl Hittable for Scene {
             .0
             .random(origin)
     }
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
-        self.0.objects.iter().flat_map(|o| o.0.lights()).collect()
+    fn lights(&self) -> Collection {
+        let objects = self.0.objects.iter().flat_map(|o| o.0.lights()).collect();
+        Collection::with_objects(objects)
     }
 }

@@ -50,9 +50,8 @@ impl Hittable for Translate {
         self.object.random(&(*origin - self.offset))
     }
 
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
-        let lights = Translate::new(Collection::with_objects(self.object.lights()), self.offset);
-        lights.objects.iter().map(|o| Arc::clone(&o.0)).collect()
+    fn lights(&self) -> Collection {
+        Translate::new(self.object.lights(), self.offset)
     }
 }
 
@@ -138,8 +137,7 @@ impl Hittable for Rotate {
     fn random(&self, origin: &Point3) -> Vec3 {
         self.mat * self.object.random(&(self.mat_t * (*origin)))
     }
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
-        let lights = Rotate::from_matrix(Collection::with_objects(self.object.lights()), self.mat);
-        lights.objects.iter().map(|o| Arc::clone(&o.0)).collect()
+    fn lights(&self) -> Collection {
+        Rotate::from_matrix(self.object.lights(), self.mat)
     }
 }

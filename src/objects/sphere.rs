@@ -2,11 +2,13 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 
 use super::hittable::{HitRecord, Hittable, Interval};
-use crate::bounding_box::AaBb;
-use crate::material::Scatter;
-use crate::objects::Object;
-use crate::ray::Ray;
-use crate::vec3::{ONB, Point3, Vec3};
+use crate::{
+    bounding_box::AaBb,
+    material::Scatter,
+    objects::{Collection, Object},
+    ray::Ray,
+    vec3::{ONB, Point3, Vec3},
+};
 
 #[derive(Clone, Debug)]
 pub struct Sphere {
@@ -92,12 +94,12 @@ impl Hittable for Sphere {
         let uvw = ONB::from_normal(&direction);
         uvw.transform(&random_to_sphere(self.radius, distance_squared))
     }
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+    fn lights(&self) -> Collection {
+        let mut res = Collection::new();
         if self.material.is_emissive() {
-            vec![Arc::new(self.clone())]
-        } else {
-            vec![]
+            res.add(Object::new(Arc::new(self.clone())));
         }
+        res
     }
 }
 
@@ -176,12 +178,12 @@ impl Hittable for MovingSphere {
     fn random(&self, _origin: &Point3) -> Vec3 {
         todo!()
     }
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+    fn lights(&self) -> Collection {
+        let mut res = Collection::new();
         if self.material.is_emissive() {
-            vec![Arc::new(self.clone())]
-        } else {
-            vec![]
+            res.add(Object::new(Arc::new(self.clone())));
         }
+        res
     }
 }
 

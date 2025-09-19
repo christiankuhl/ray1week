@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     bounding_box::AaBb,
     material::Scatter,
-    objects::{HitRecord, Hittable, Interval, Object},
+    objects::{Collection, HitRecord, Hittable, Interval, Object},
     ray::Ray,
     vec3::{Point3, Vec3},
 };
@@ -107,11 +107,11 @@ impl Hittable for Quad {
         let p = self.q + (fastrand::f64() * self.u) + (fastrand::f64() * self.v);
         p - *origin
     }
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+    fn lights(&self) -> Collection {
+        let mut res = Collection::new();
         if self.material.is_emissive() {
-            vec![Arc::new(self.clone())]
-        } else {
-            vec![]
+            res.add(Object::new(Arc::new(self.clone())));
         }
+        res
     }
 }

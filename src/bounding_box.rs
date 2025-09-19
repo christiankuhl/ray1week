@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 const DELTA: f64 = 0.0001;
 
+use crate::objects::Collection;
 use crate::vec3::Vec3;
 use crate::{
     objects::{HitRecord, Hittable, Interval},
@@ -193,7 +194,7 @@ impl<'a> Hittable for BVHNode<'a> {
     fn random(&self, _origin: &Point3) -> Vec3 {
         panic!("Asked for PDF on a bounding box!")
     }
-    fn lights(&self) -> Vec<Arc<dyn Hittable>> {
+    fn lights(&self) -> Collection {
         let mut res = self.left.lights();
         res.extend(self.right.lights());
         res

@@ -1,6 +1,5 @@
-use super::{Hittable, IntoPrimitives, Object};
+use super::{IntoPrimitives, Object};
 use crate::bounding_box::AaBb;
-use std::sync::Arc;
 
 #[derive(Default, Debug)]
 pub struct Collection {
@@ -16,9 +15,9 @@ impl Collection {
         }
     }
 
-    pub fn with_objects(objects: Vec<Arc<dyn Hittable>>) -> Self {
+    pub fn with_objects(objects: Vec<Object>) -> Self {
         Self {
-            objects: objects.iter().map(|o| Object(Arc::clone(o))).collect(),
+            objects,
             bbox: AaBb::default(),
         }
     }
@@ -29,10 +28,23 @@ impl Collection {
             self.objects.push(obj.clone());
         }
     }
+
+    pub fn extend(&mut self, other: Self) {
+        self.objects.extend(other.objects);
+    }
 }
 
 impl IntoPrimitives for Collection {
     fn primitives(&self) -> Vec<Object> {
         self.objects.to_vec()
+    }
+}
+
+impl IntoIterator for Collection {
+    type Item = Object;
+    type IntoIter = std::vec::IntoIter<Object>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.objects.into_iter()
     }
 }
