@@ -162,9 +162,8 @@ impl Renderer {
         }
     }
 
-    pub fn render<F, P>(&self, world: &mut Scene, path: F, p: &mut P) -> Result<(), ImageError>
+    pub fn render<P>(&self, world: &mut Scene, p: &mut P) -> RgbImage
     where
-        F: AsRef<Path> + Display,
         P: Write + Sync + Send,
     {
         let p = Arc::new(Mutex::new(p));
@@ -197,8 +196,21 @@ impl Renderer {
             "\rRay tracing done.                             "
         )
         .unwrap();
-        let buffer = self.assemble_image(&blocks);
-        writeln!(p.lock().unwrap(), "Saving image to {path}...").unwrap();
+        self.assemble_image(&blocks)
+    }
+
+    pub fn render_to_file<F, P>(
+        &self,
+        world: &mut Scene,
+        path: F,
+        p: &mut P,
+    ) -> Result<(), ImageError>
+    where
+        F: AsRef<Path> + Display,
+        P: Write + Sync + Send,
+    {
+        let buffer = self.render(world, p);
+        writeln!(p, "Saving image to {path}...").unwrap();
         buffer.save(path)
     }
 

@@ -52,8 +52,8 @@ fn main() -> Result<(), ImageError> {
     // Render to file
     let renderer = camera.renderer(50, 10);
     renderer
-        .render(&mut world, "examples/output/zoom_out.png", &mut stderr())
+        .render_to_file(&mut world, "examples/output/zoom_out.png", &mut stderr())
         .unwrap();
     let renderer = zoom.renderer(50, 10);
-    renderer.render(&mut world, "examples/output/zoom_in.png", &mut stderr())
+    renderer.render_to_file(&mut world, "examples/output/zoom_in.png", &mut stderr())
 }

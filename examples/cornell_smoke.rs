@@ -85,7 +85,7 @@ fn main() -> Result<(), ImageError> {
     };
 
     let renderer = cam.renderer(200, 50);
-    renderer.render(
+    renderer.render_to_file(
         &mut world,
         "examples/output/cornell_box_smoke.png",
         &mut stderr(),

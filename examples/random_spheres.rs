@@ -44,7 +44,7 @@ fn main() -> Result<(), ImageError> {
     };
 
     let renderer = cam.renderer(50, 50);
-    renderer.render(
+    renderer.render_to_file(
         &mut world,
         "examples/output/random_spheres.png",
         &mut stderr(),

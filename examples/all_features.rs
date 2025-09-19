@@ -110,7 +110,7 @@ fn main() -> Result<(), ImageError> {
     };
 
     let renderer = cam.renderer(10, 50);
-    renderer.render(
+    renderer.render_to_file(
         &mut world,
         "examples/output/all_features_test.png",
         &mut stderr(),
