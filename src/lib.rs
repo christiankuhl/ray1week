@@ -3,6 +3,7 @@
 
 mod bounding_box;
 pub mod colour;
+pub mod linalg;
 pub mod material;
 pub mod objects;
 pub mod prelude;
@@ -12,5 +13,4 @@ pub mod render;
 mod scene;
 pub mod texture;
 pub mod transform;
-pub mod vec3;
 pub mod volumetrics;

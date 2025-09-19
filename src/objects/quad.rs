@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use crate::{
     bounding_box::AaBb,
+    linalg::{Point3, Vec3},
     material::Scatter,
     objects::{Collection, HitRecord, Hittable, Interval, Object},
     ray::Ray,
-    vec3::{Point3, Vec3},
 };
 
 const EPSILON: f64 = 1e-8;

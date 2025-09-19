@@ -4,10 +4,10 @@ use std::sync::Arc;
 use super::hittable::{HitRecord, Hittable, Interval};
 use crate::{
     bounding_box::AaBb,
+    linalg::{ONB, Point3, Vec3},
     material::Scatter,
     objects::{Collection, Object},
     ray::Ray,
-    vec3::{ONB, Point3, Vec3},
 };
 
 #[derive(Clone, Debug)]

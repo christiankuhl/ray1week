@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use crate::{
     colour::Colour,
+    linalg::{Point3, Vec3},
     material::{Isotropic, Scatter},
     objects::{Collection, HitRecord, Hittable, Interval, IntoPrimitives, Object},
     ray::Ray,
     texture::SolidColour,
-    vec3::{Point3, Vec3},
 };
 
 #[derive(Clone, Debug)]

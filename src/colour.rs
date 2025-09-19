@@ -2,7 +2,7 @@ use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
 use image::Rgb;
 
-use crate::vec3::Vec3;
+use crate::linalg::Vec3;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Colour {

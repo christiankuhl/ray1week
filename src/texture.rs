@@ -4,8 +4,8 @@ use image::{ImageError, ImageReader, Rgb32FImage};
 
 use crate::{
     colour::Colour,
+    linalg::{Point3, Vec3},
     random::random_unit_vector,
-    vec3::{Point3, Vec3},
 };
 
 const POINT_COUNT: usize = 256;

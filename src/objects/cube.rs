@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::{
+    linalg::{Point3, Vec3},
     material::Scatter,
     objects::{IntoPrimitives, Object, Quad},
-    vec3::{Point3, Vec3},
 };
 
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 use crate::bounding_box::AaBb;
+use crate::linalg::{Point3, Vec3};
 use crate::objects::{Collection, HitRecord, Hittable, Interval, IntoPrimitives, Object};
 use crate::ray::Ray;
-use crate::vec3::{Point3, Vec3};
 
 #[derive(Debug)]
 pub struct Scene(Collection);

@@ -3,10 +3,10 @@ use std::ops::Add;
 use std::sync::Arc;
 
 use crate::bounding_box::AaBb;
+use crate::linalg::{Point3, Vec3};
 use crate::material::Scatter;
 use crate::objects::Collection;
 use crate::ray::Ray;
-use crate::vec3::{Point3, Vec3};
 
 #[derive(Debug)]
 pub struct HitRecord {

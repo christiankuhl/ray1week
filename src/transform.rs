@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     bounding_box::AaBb,
+    linalg::{Mat3, Point3, Vec3},
     objects::{Collection, HitRecord, Hittable, Interval, IntoPrimitives, Object},
     ray::Ray,
-    vec3::{Mat3, Point3, Vec3},
 };
 
 #[derive(Debug, Clone)]

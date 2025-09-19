@@ -2,11 +2,11 @@ use std::{f64::consts::PI, sync::Arc};
 
 use crate::{
     colour::Colour,
+    linalg::{Point3, Vec3},
     objects::HitRecord,
     random::{CosinePDF, DirectionalPDF, UniformSphericalPDF, random_unit_vector},
     ray::Ray,
     texture::{SolidColour, Texture},
-    vec3::{Point3, Vec3},
 };
 
 #[derive(Clone)]

@@ -11,13 +11,13 @@ use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::bounding_box::BVHNode;
 use crate::colour::Colour;
+use crate::linalg::{Point3, Vec3};
 use crate::material::ScatterResult;
 use crate::objects::{Hittable, Interval, sphere_uv};
 use crate::random::{DirectionalPDF, HittablePDF, MixturePDF, random_unit_disk};
 use crate::ray::Ray;
 use crate::scene::Scene;
 use crate::texture::{SkyTexture, Texture};
-use crate::vec3::{Point3, Vec3};
 
 #[derive(Debug, Clone)]
 pub struct Camera {

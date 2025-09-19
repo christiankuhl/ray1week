@@ -1,8 +1,8 @@
 use std::{f64::consts::PI, sync::Arc};
 
 use crate::{
+    linalg::{ONB, Point3, Vec3},
     objects::Hittable,
-    vec3::{ONB, Point3, Vec3},
 };
 
 pub fn sample_square() -> Vec3 {

@@ -3,12 +3,10 @@ use std::sync::Arc;
 
 const DELTA: f64 = 0.0001;
 
-use crate::objects::Collection;
-use crate::vec3::Vec3;
 use crate::{
-    objects::{HitRecord, Hittable, Interval},
+    linalg::{Point3, Vec3},
+    objects::{Collection, HitRecord, Hittable, Interval},
     ray::Ray,
-    vec3::Point3,
 };
 
 #[derive(Debug, Default, Clone, Copy)]
