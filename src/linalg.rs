@@ -154,6 +154,52 @@ impl Div<f64> for Vec3 {
     }
 }
 
+impl Mul<f64> for &Vec3 {
+    type Output = Vec3;
+    fn mul(self, rhs: f64) -> Self::Output {
+        *self * rhs
+    }
+}
+
+impl Neg for &Vec3 {
+    type Output = Vec3;
+    fn neg(self) -> Self::Output {
+        -(*self)
+    }
+}
+
+impl Add for &Vec3 {
+    type Output = Vec3;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        *self + *rhs
+    }
+}
+
+impl Sub for &Vec3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        *self - *rhs
+    }
+}
+
+impl Mul<&Vec3> for f64 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: &Vec3) -> Self::Output {
+        self * (*rhs)
+    }
+}
+
+impl Div<f64> for &Vec3 {
+    type Output = Vec3;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        *self / rhs
+    }
+}
+
 impl Index<usize> for Vec3 {
     type Output = f64;
 
