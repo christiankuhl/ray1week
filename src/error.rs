@@ -4,7 +4,6 @@ use image::ImageError;
 
 use crate::objects::WavefrontObjError;
 
-#[derive(Debug)]
 pub enum RenderError {
     ImageError(ImageError),
     ObjectConstruction(WavefrontObjError),
@@ -16,6 +15,12 @@ impl std::fmt::Display for RenderError {
             Self::ImageError(ref err) => write!(f, "{err}"),
             Self::ObjectConstruction(ref err) => write!(f, "{err}"),
         }
+    }
+}
+
+impl std::fmt::Debug for RenderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self, f)
     }
 }
 
