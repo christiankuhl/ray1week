@@ -11,7 +11,7 @@ use ray1week::{
 
 const BOUNDARY: i32 = 11;
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
     let mut materials: Vec<Material> = Vec::new();
     let checker =

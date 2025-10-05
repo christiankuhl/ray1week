@@ -10,7 +10,7 @@ use ray1week::{
     volumetrics::ConstantMedium,
 };
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
 
     let red = Lambertian::new(Colour::new(0.65, 0.05, 0.05));

@@ -4,7 +4,7 @@ use ray1week::prelude::*;
 
 use ray1week::{material::Lambertian, objects::Sphere, texture::NoiseTexture};
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
 
     let ground = NoiseTexture::plain(4.0);

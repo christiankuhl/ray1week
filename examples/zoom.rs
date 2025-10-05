@@ -7,7 +7,7 @@ use ray1week::{
     objects::Sphere,
 };
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     // Scene setup
     let mut world = Scene::new();
     let material_ground = Lambertian::new(Colour::new(0.8, 0.8, 0.0));

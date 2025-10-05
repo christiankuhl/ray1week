@@ -2,6 +2,7 @@
 
 mod bounding_box;
 pub mod colour;
+mod error;
 pub mod linalg;
 pub mod material;
 pub mod objects;

@@ -1,4 +1,5 @@
 pub use crate::colour::{Color, Colour};
+pub use crate::error::RenderError;
 pub use crate::linalg::{Point3, Vec3};
 pub use crate::objects::Collection;
 pub use crate::render::Camera;

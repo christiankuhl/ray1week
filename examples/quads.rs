@@ -4,7 +4,7 @@ use ray1week::prelude::*;
 
 use ray1week::{material::Lambertian, objects::Quad};
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
 
     // Materials

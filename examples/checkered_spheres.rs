@@ -8,7 +8,7 @@ use ray1week::{
     texture::{CheckerTexture, UVSlice},
 };
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
 
     let spatial_checker = CheckerTexture::solid(

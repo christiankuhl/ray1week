@@ -8,7 +8,7 @@ use ray1week::{
     texture::{NoiseTexture, SolidColour},
 };
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
     let marble = NoiseTexture::marble(4.0);
     let marble = Lambertian::from_texture(marble);

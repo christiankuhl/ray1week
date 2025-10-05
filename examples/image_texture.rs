@@ -4,7 +4,7 @@ use ray1week::prelude::*;
 
 use ray1week::{material::Lambertian, objects::Sphere, texture::ImageTexture};
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
 
     let map = ImageTexture::new("examples/resources/earthmap.jpg").unwrap();

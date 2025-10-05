@@ -6,11 +6,12 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 
 use image::buffer::ConvertBuffer;
-use image::{ImageError, Rgb32FImage, RgbImage};
+use image::{Rgb32FImage, RgbImage};
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::bounding_box::BVHNode;
 use crate::colour::Colour;
+use crate::error::RenderError;
 use crate::linalg::{Point3, Vec3};
 use crate::material::ScatterResult;
 use crate::objects::{Hittable, Interval, sphere_uv};
@@ -204,14 +205,14 @@ impl Renderer {
         world: &mut Scene,
         path: F,
         p: &mut P,
-    ) -> Result<(), ImageError>
+    ) -> Result<(), RenderError>
     where
         F: AsRef<Path> + Display,
         P: Write + Sync + Send,
     {
         let buffer = self.render(world, p);
         writeln!(p, "Saving image to {path}...").unwrap();
-        buffer.save(path)
+        buffer.save(path).map_err(|e| e.into())
     }
 
     fn image_blocks(&self) -> Vec<ImageBlock> {

@@ -10,7 +10,7 @@ use ray1week::{
     volumetrics::ConstantMedium,
 };
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut boxes1 = Collection::new();
     let ground = Lambertian::new(Colour::new(0.48, 0.83, 0.53));
     let boxes_per_side = 20;

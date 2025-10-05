@@ -9,7 +9,7 @@ use ray1week::{
     transform::{Rotate, Translate},
 };
 
-fn main() -> Result<(), ImageError> {
+fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
 
     let red = Lambertian::new(Colour::new(0.65, 0.05, 0.05));
