@@ -135,4 +135,10 @@ impl Div<f64> for Colour {
     }
 }
 
+impl Default for Colour {
+    fn default() -> Self {
+        Colour::BLACK
+    }
+}
+
 pub type Color = Colour;

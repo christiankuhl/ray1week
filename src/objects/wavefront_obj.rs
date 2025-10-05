@@ -1,6 +1,9 @@
-use std::{error::Error, fs::read_to_string, path::Path};
+use std::{collections::HashMap, error::Error, fs::read_to_string, path::Path};
+
+use image::{ImageError, ImageReader, Rgb32FImage};
 
 use crate::{
+    colour::Colour,
     linalg::{Vec3, Vec4},
     material::Material,
     objects::{IntoPrimitives, Object, Triangle},
@@ -15,6 +18,7 @@ pub struct WavefrontObj {
     parameter_vertices: Vec<OptParams>,
     faces: Vec<(usize, Vec<ObjIndex>)>,
     lines: Vec<(usize, Vec<isize>)>,
+    mtllib: Option<MtlLib>,
 }
 
 impl WavefrontObj {
@@ -22,15 +26,14 @@ impl WavefrontObj {
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, WavefrontObjError> {
         let data = read_to_string(&path)?;
         let mut obj = Self::default();
-        obj.file = path
-            .as_ref()
-            .as_os_str()
-            .to_owned()
-            .into_string()
-            .expect("You have done something so esoteric, you probably deserve this.");
+        obj.file = path_ref_to_string(&path);
         for (row_num, row) in data.split("\n").enumerate() {
             let row_num = row_num + 1;
-            if row.starts_with("#") || row.is_empty() {
+            if row.starts_with("#")
+                || row.is_empty()
+                || row.starts_with("o ")
+                || row.starts_with("s ")
+            {
                 continue;
             } else if row.starts_with("v ") {
                 let coords: Vec<_> = row.split(" ").skip(1).map(|x| x.parse::<f64>()).collect();
@@ -149,10 +152,20 @@ impl WavefrontObj {
                 }
                 obj.lines
                     .push((row_num, idxs.iter().map(|j| j.clone().unwrap()).collect()));
+            } else if row.starts_with("mtllib ") {
+                if let Some(file) = row.split(" ").nth(1) {
+                    let path = path.as_ref().with_file_name(file);
+                    obj.mtllib = Some(MtlLib::from_file(path)?);
+                } else {
+                    let err = Box::new(WavefrontObjError::MissingArgument("mtllib".to_owned()));
+                    return Err(WavefrontObjError::ParseError(obj.file, row_num, err));
+                }
+            } else if row.starts_with("usemtl ") {
+                continue;
             } else {
                 return Err(WavefrontObjError::UnsupportedType(
                     obj.file,
-                    row.to_owned(),
+                    row.split(" ").next().unwrap().to_owned(),
                     row_num,
                 ));
             }
@@ -253,6 +266,95 @@ impl WavefrontObj {
     }
 }
 
+pub struct MtlLib {
+    materials: HashMap<String, Mtl>,
+}
+
+impl MtlLib {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, WavefrontObjError> {
+        let file = path_ref_to_string(&path);
+        let mut lib = Self {
+            materials: HashMap::new(),
+        };
+        let data = read_to_string(&path)?;
+        let mut mtls = 0;
+        let mut mtl = Mtl::default();
+        let mut mat_name: String = String::new();
+        for (row_num, row) in data.split("\n").enumerate() {
+            let row_num = row_num + 1;
+            let row = row.trim();
+            if row.starts_with("# ") || row.is_empty() {
+                continue;
+            } else if row.starts_with("newmtl ") {
+                if let Some(name) = row.split(" ").next() {
+                    mat_name = name.to_owned();
+                } else {
+                    let err = Box::new(WavefrontObjError::MissingArgument("newmtl".to_owned()));
+                    return Err(WavefrontObjError::ParseError(file, row_num, err));
+                }
+                if mtls > 0 {
+                    lib.materials.insert(mat_name.clone(), mtl);
+                    mtl = Mtl::default();
+                }
+                mtls += 1;
+            } else if row.starts_with("Ka ") {
+                mtl.ambient = parse_colour(row, row_num, &file)?;
+            } else if row.starts_with("Kd ") {
+                mtl.diffuse = parse_colour(row, row_num, &file)?;
+            } else if row.starts_with("Ks ") {
+                mtl.specular = parse_colour(row, row_num, &file)?;
+            } else if row.starts_with("Ke ") {
+                mtl.emissive = parse_colour(row, row_num, &file)?;
+            } else if row.starts_with("Tf ") {
+                mtl.transmission_filter = parse_colour(row, row_num, &file)?;
+            } else if row.starts_with("Ns ") {
+                mtl.exponent = parse_single_float(row, row_num, &file)?;
+            } else if row.starts_with("Ni ") {
+                mtl.density = parse_single_float(row, row_num, &file)?;
+            } else if row.starts_with("d ") || row.starts_with("Tr ") {
+                mtl.transmission = parse_single_float(row, row_num, &file)?;
+                if row.starts_with("d ") {
+                    mtl.transmission = 1.0 - mtl.transmission;
+                }
+            } else if row.starts_with("illum ") {
+                mtl.illumination = IlluminationModel::parse(row, row_num, &file)?;
+            } else if row.starts_with("map_Kd ") {
+                if let Some(file) = row.split(" ").nth(1) {
+                    let path = path.as_ref().with_file_name(file);
+                    mtl.diffuse_texture = Some(ImageReader::open(path)?.decode()?.into_rgb32f());
+                } else {
+                    let err = Box::new(WavefrontObjError::MissingArgument("map_Kd".to_owned()));
+                    return Err(WavefrontObjError::ParseError(file, row_num, err));
+                }
+            } else {
+                return Err(WavefrontObjError::UnsupportedType(
+                    file,
+                    row.split(" ").next().unwrap().to_owned(),
+                    row_num,
+                ));
+            }
+        }
+        if mtls > 0 {
+            lib.materials.insert(mat_name.clone(), mtl);
+        }
+        Ok(lib)
+    }
+}
+
+#[derive(Default)]
+struct Mtl {
+    ambient: Colour,
+    diffuse: Colour,
+    specular: Colour,
+    exponent: f64,
+    transmission: f64,
+    transmission_filter: Colour,
+    emissive: Colour,
+    density: f64,
+    illumination: IlluminationModel,
+    diffuse_texture: Option<Rgb32FImage>,
+}
+
 #[derive(Default, Debug, Clone)]
 struct ObjIndex {
     vertex: isize,
@@ -262,6 +364,7 @@ struct ObjIndex {
 
 pub enum WavefrontObjError {
     IOError(std::io::Error),
+    ImageError(ImageError),
     UnsupportedType(String, String, usize),
     ParseError(String, usize, Box<dyn Error>),
     IncompleteFace(String, usize),
@@ -269,12 +372,16 @@ pub enum WavefrontObjError {
     IncompleteNormal(String, usize),
     InconsistentObject(String, usize, GeometryType, GeometryType, isize),
     MalformedIndex,
+    MissingArgument(String),
+    IncompleteColour(String, usize),
+    UnknownIlluminationModel(String, usize, String),
 }
 
 impl std::fmt::Display for WavefrontObjError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::IOError(ref err) => write!(f, "{err}"),
+            Self::ImageError(ref err) => write!(f, "{err}"),
             Self::UnsupportedType(ref file, ref typ, line) => {
                 write!(
                     f,
@@ -307,6 +414,18 @@ impl std::fmt::Display for WavefrontObjError {
                 )
             }
             Self::MalformedIndex => write!(f, "Malformed index"),
+            Self::MissingArgument(ref directive) => {
+                write!(f, "Missing argument for directive {directive}")
+            }
+            Self::IncompleteColour(ref file, line) => {
+                write!(f, "{file}: Not enough data to form a colour in line {line}")
+            }
+            Self::UnknownIlluminationModel(ref file, line, ref mode) => {
+                write!(
+                    f,
+                    "{file}, line {line}: Encountered unknown illumination model '{mode}'"
+                )
+            }
         }
     }
 }
@@ -329,6 +448,12 @@ impl Error for WavefrontObjError {
 impl From<std::io::Error> for WavefrontObjError {
     fn from(value: std::io::Error) -> Self {
         Self::IOError(value)
+    }
+}
+
+impl From<ImageError> for WavefrontObjError {
+    fn from(value: ImageError) -> Self {
+        Self::ImageError(value)
     }
 }
 
@@ -365,5 +490,102 @@ impl std::fmt::Display for GeometryType {
             Self::TextureCoord => write!(f, "texture coordinate"),
             Self::Normal => write!(f, "vertex normal"),
         }
+    }
+}
+
+enum IlluminationModel {
+    // 0. Color on and Ambient off
+    ColourNoAmbient,
+    // 1. Color on and Ambient on
+    ColourAmbient,
+    // 2. Highlight on
+    Highlight,
+    // 3. Reflection on and Ray trace on
+    ReflectionRaytrace,
+    // 4. Transparency: Glass on, Reflection: Ray trace on
+    GlassReflection,
+    // 5. Reflection: Fresnel on and Ray trace on
+    ReflectionFresnel,
+    // 6. Transparency: Refraction on, Reflection: Fresnel off and Ray trace on
+    RefractionNoFresnel,
+    // 7. Transparency: Refraction on, Reflection: Fresnel on and Ray trace on
+    RefractionFresnel,
+    // 8. Reflection on and Ray trace off
+    ReflectionOnly,
+    // 9. Transparency: Glass on, Reflection: Ray trace off
+    GlassNoReflection,
+    // 10. Casts shadows onto invisible surfaces
+    Shadows,
+}
+
+impl IlluminationModel {
+    fn parse(row: &str, row_num: usize, file: &str) -> Result<Self, WavefrontObjError> {
+        if let Some((_directive, value)) = row.split_once(" ") {
+            match value {
+                "0" => Ok(Self::ColourNoAmbient),
+                "1" => Ok(Self::ColourAmbient),
+                "2" => Ok(Self::Highlight),
+                "3" => Ok(Self::ReflectionRaytrace),
+                "4" => Ok(Self::GlassReflection),
+                "5" => Ok(Self::ReflectionFresnel),
+                "6" => Ok(Self::RefractionNoFresnel),
+                "7" => Ok(Self::RefractionFresnel),
+                "8" => Ok(Self::ReflectionOnly),
+                "9" => Ok(Self::GlassNoReflection),
+                "10" => Ok(Self::Shadows),
+                _ => Err(WavefrontObjError::UnknownIlluminationModel(
+                    file.to_owned(),
+                    row_num,
+                    value.to_owned(),
+                )),
+            }
+        } else {
+            let err = Box::new(WavefrontObjError::MissingArgument(row.to_owned()));
+            Err(WavefrontObjError::ParseError(file.to_owned(), row_num, err))
+        }
+    }
+}
+
+impl Default for IlluminationModel {
+    fn default() -> Self {
+        Self::ColourNoAmbient
+    }
+}
+
+fn path_ref_to_string(path: impl AsRef<Path>) -> String {
+    path.as_ref()
+        .as_os_str()
+        .to_owned()
+        .into_string()
+        .expect("You have done something so esoteric, you probably deserve this.")
+}
+
+fn parse_colour(row: &str, row_num: usize, file: &str) -> Result<Colour, WavefrontObjError> {
+    let components: Vec<_> = row.split(" ").skip(1).map(|s| s.parse::<f64>()).collect();
+    if components.len() != 3 {
+        return Err(WavefrontObjError::IncompleteColour(
+            file.to_owned(),
+            row_num,
+        ));
+    }
+    if let Some(c) = components.iter().find(|s| s.is_err()) {
+        let err = Box::new(c.clone().err().unwrap());
+        return Err(WavefrontObjError::ParseError(file.to_owned(), row_num, err));
+    }
+    Ok(Colour::new(
+        components[0].clone().unwrap(),
+        components[1].clone().unwrap(),
+        components[2].clone().unwrap(),
+    ))
+}
+
+fn parse_single_float(row: &str, row_num: usize, file: &str) -> Result<f64, WavefrontObjError> {
+    if let Some((_directive, value)) = row.split_once(" ") {
+        value
+            .parse()
+            .map_err(|err| WavefrontObjError::ParseError(file.to_owned(), row_num, Box::new(err)))
+    } else {
+        let err = Box::new(WavefrontObjError::MissingArgument(row.to_owned()));
+        Err(WavefrontObjError::ParseError(file.to_owned(), row_num, err))
     }
 }
