@@ -18,7 +18,7 @@ use crate::objects::{Hittable, Interval, sphere_uv};
 use crate::random::{DirectionalPDF, HittablePDF, MixturePDF, random_unit_disk};
 use crate::ray::Ray;
 use crate::scene::Scene;
-use crate::texture::{SkyTexture, Texture};
+use crate::texture::{SkyTexture, Texture, Textured};
 
 #[derive(Debug, Clone)]
 pub struct Camera {
@@ -140,7 +140,7 @@ impl Renderer {
         self.center + p.x * self.defocus_disk_u + p.y * self.defocus_disk_v
     }
 
-    fn render_block(&self, block: &mut ImageBlock, world: &BVHNode, lights: Arc<Scene>) {
+    fn render_block(&self, block: &mut ImageBlock, world: &BVHNode, lights: &Scene) {
         let pixel_samples_scale = 1.0 / (self.sqrt_spp * self.sqrt_spp) as f64;
         for y in block.ymin..block.ymax {
             for x in block.xmin..block.xmax {
@@ -148,13 +148,7 @@ impl Renderer {
                 for sj in 0..self.sqrt_spp {
                     for si in 0..self.sqrt_spp {
                         let r = self.get_ray(x, y, si, sj);
-                        c += ray_colour(
-                            r,
-                            world,
-                            Arc::clone(&lights),
-                            self.max_depth,
-                            self.background.clone(),
-                        );
+                        c += ray_colour(r, world, lights, self.max_depth, self.background.as_ref());
                     }
                 }
                 c = pixel_samples_scale * c;
@@ -169,7 +163,7 @@ impl Renderer {
     {
         let p = Arc::new(Mutex::new(p));
         writeln!(p.lock().unwrap(), "Collecting light sources...").unwrap();
-        let lights = Arc::new(Scene::with_objects(world.lights()));
+        let lights = Scene::with_objects(world.lights());
         writeln!(p.lock().unwrap(), "Building render node hierarchy...").unwrap();
         let mut raw_objects = world.objects().iter().map(|o| Arc::clone(o)).collect();
         let bvh = BVHNode::new(&mut raw_objects);
@@ -183,7 +177,7 @@ impl Renderer {
         let done = AtomicUsize::new(0);
         let total = blocks.len();
         blocks.par_iter_mut().for_each(|block| {
-            self.render_block(block, &bvh, lights.clone());
+            self.render_block(block, &bvh, &lights);
             done.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             write!(
                 p.lock().unwrap(),
@@ -245,15 +239,16 @@ impl Renderer {
 fn ray_colour(
     ray: Ray,
     world: &BVHNode,
-    lights: Arc<Scene>,
+    lights: &Scene,
     depth: usize,
-    background: Texture,
+    background: &dyn Textured,
 ) -> Colour {
     if depth == 0 {
         return Colour::BLACK;
     }
     if let Some(rec) = world.hit(&ray, Interval::new(0.001, f64::INFINITY)) {
         let colour_from_emission = rec.material.emit(&rec, rec.u, rec.v, rec.p);
+        let light_pdf = HittablePDF::new(lights, rec.p);
         if let Some(scatter) = rec.material.scatter(ray, &rec) {
             match scatter.scattered {
                 ScatterResult::SpecularRay(specular_ray) => {
@@ -262,11 +257,9 @@ fn ray_colour(
                 }
                 ScatterResult::PDF(pdf) => {
                     let mixture = if !lights.objects().is_empty() {
-                        let lights_ptr = Arc::clone(&lights);
-                        let light_pdf = HittablePDF::new(lights_ptr, rec.p);
-                        MixturePDF::new(Arc::new(light_pdf), pdf)
+                        MixturePDF::new(&light_pdf, pdf.as_ref())
                     } else {
-                        MixturePDF::new(pdf.clone(), pdf)
+                        MixturePDF::new(pdf.as_ref(), pdf.as_ref())
                     };
                     let scattered = Ray::time_dependent(rec.p, mixture.generate(), ray.time);
                     let pdf_value = mixture.value(&scattered.direction);

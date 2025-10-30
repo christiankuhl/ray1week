@@ -1,4 +1,4 @@
-use std::{f64::consts::PI, sync::Arc};
+use std::f64::consts::PI;
 
 use crate::{
     linalg::{ONB, Point3, Vec3},
@@ -81,12 +81,12 @@ impl DirectionalPDF for CosinePDF {
 }
 
 pub struct HittablePDF<'a> {
-    objects: Arc<dyn Hittable + 'a>,
+    objects: &'a dyn Hittable,
     origin: Point3,
 }
 
 impl<'a> HittablePDF<'a> {
-    pub fn new(objects: Arc<dyn Hittable + 'a>, origin: Point3) -> Self {
+    pub fn new(objects: &'a dyn Hittable, origin: Point3) -> Self {
         Self { objects, origin }
     }
 }
@@ -101,12 +101,12 @@ impl<'a> DirectionalPDF for HittablePDF<'a> {
 }
 
 pub struct MixturePDF<'a> {
-    p0: Arc<dyn DirectionalPDF + 'a>,
-    p1: Arc<dyn DirectionalPDF + 'a>,
+    p0: &'a dyn DirectionalPDF,
+    p1: &'a dyn DirectionalPDF,
 }
 
 impl<'a> MixturePDF<'a> {
-    pub fn new(p0: Arc<dyn DirectionalPDF + 'a>, p1: Arc<dyn DirectionalPDF + 'a>) -> Self {
+    pub fn new(p0: &'a dyn DirectionalPDF, p1: &'a dyn DirectionalPDF) -> Self {
         Self { p0, p1 }
     }
 }

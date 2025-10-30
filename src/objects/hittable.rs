@@ -4,16 +4,16 @@ use std::ops::Add;
 use crate::{
     bounding_box::AaBb,
     linalg::{Point3, Vec3},
-    material::Material,
+    material::Scatter,
     objects::Collection,
     ray::Ray,
 };
 
 #[derive(Debug)]
-pub struct HitRecord {
+pub struct HitRecord<'a> {
     pub p: Point3,
     pub normal: Vec3,
-    pub material: Material,
+    pub material: &'a dyn Scatter,
     pub t: f64,
     pub u: f64,
     pub v: f64,

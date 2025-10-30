@@ -73,7 +73,7 @@ impl Hittable for ConstantMedium {
                     p: ray.at(t),
                     normal: Vec3::EX,
                     front_face: true,
-                    material: self.phase_function.clone(),
+                    material: self.phase_function.as_ref(),
                     u: 0.0,
                     v: 0.0,
                 })

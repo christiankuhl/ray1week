@@ -56,7 +56,6 @@ impl Hittable for Sphere {
         let normal = (p - self.center) / self.radius;
         let front_face = ray.direction.dot(&normal) < 0.0;
         let normal = if front_face { normal } else { -normal };
-        let material = self.material.clone();
         let (u, v) = sphere_uv(normal);
         Some(HitRecord {
             p,
@@ -65,7 +64,7 @@ impl Hittable for Sphere {
             u,
             v,
             front_face,
-            material,
+            material: self.material.as_ref(),
         })
     }
     fn bbox(&self) -> AaBb {
@@ -152,7 +151,6 @@ impl Hittable for MovingSphere {
         let normal = (p - self.center.at(ray.time)) / self.radius;
         let front_face = ray.direction.dot(&normal) < 0.0;
         let normal = if front_face { normal } else { -normal };
-        let material = self.material.clone();
         let (u, v) = sphere_uv(normal);
         Some(HitRecord {
             p,
@@ -161,7 +159,7 @@ impl Hittable for MovingSphere {
             u,
             v,
             front_face,
-            material,
+            material: self.material.as_ref(),
         })
     }
     fn bbox(&self) -> AaBb {

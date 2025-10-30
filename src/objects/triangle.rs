@@ -82,7 +82,7 @@ impl Hittable for Triangle {
         Some(HitRecord {
             p: intersection,
             t,
-            material: self.material.clone(),
+            material: self.material.as_ref(),
             normal,
             front_face,
             u: alpha,

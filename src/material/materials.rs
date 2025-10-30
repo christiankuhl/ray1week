@@ -31,7 +31,7 @@ impl Scatter for Lambertian {
     fn scatter(&self, _ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         Some(ScatterRecord {
             attenuation: self.texture.value(hit.u, hit.v, hit.p),
-            scattered: ScatterResult::PDF(Arc::new(CosinePDF::new(&hit.normal))),
+            scattered: ScatterResult::PDF(Box::new(CosinePDF::new(&hit.normal))),
         })
     }
 
@@ -197,7 +197,7 @@ impl Scatter for Isotropic {
     fn scatter(&self, _ray: Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         Some(ScatterRecord {
             attenuation: self.texture.value(hit.u, hit.v, hit.p),
-            scattered: ScatterResult::PDF(Arc::new(UniformSphericalPDF)),
+            scattered: ScatterResult::PDF(Box::new(UniformSphericalPDF)),
         })
     }
 

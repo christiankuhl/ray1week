@@ -9,15 +9,13 @@ use std::{
 
 use crate::{colour::Colour, linalg::Point3, objects::HitRecord, random::DirectionalPDF, ray::Ray};
 
-#[derive(Clone)]
 pub struct ScatterRecord {
     pub attenuation: Colour,
     pub scattered: ScatterResult,
 }
 
-#[derive(Clone)]
 pub enum ScatterResult {
-    PDF(Arc<dyn DirectionalPDF>),
+    PDF(Box<dyn DirectionalPDF>),
     SpecularRay(Ray),
 }
 
