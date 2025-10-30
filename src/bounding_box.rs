@@ -56,21 +56,9 @@ impl AaBb {
             let t0 = (ax.min - r.origin[axis]) * adinv;
             let t1 = (ax.max - r.origin[axis]) * adinv;
 
-            if t0 < t1 {
-                if t0 > t.min {
-                    t.min = t0;
-                }
-                if t1 < t.max {
-                    t.max = t1;
-                }
-            } else {
-                if t1 > t.min {
-                    t.min = t1;
-                }
-                if t0 < t.max {
-                    t.max = t0;
-                }
-            }
+            let (tmin, tmax) = swap_to_ordered(t0, t1);
+            t.min = t.min.max(tmin);
+            t.max = t.max.min(tmax);
 
             if t.max <= t.min {
                 return None;
@@ -102,6 +90,10 @@ impl AaBb {
     }
 }
 
+fn swap_to_ordered(x: f64, y: f64) -> (f64, f64) {
+    let a = x - y;
+    (0.5 * (a - a.abs()) + y, 0.5 * (a + a.abs()) + y)
+}
 impl Index<usize> for AaBb {
     type Output = Interval;
 
