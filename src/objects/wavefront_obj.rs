@@ -1,12 +1,13 @@
-use std::{collections::HashMap, error::Error, fs::read_to_string, path::Path};
+use std::{collections::HashMap, error::Error, fs::read_to_string, path::Path, sync::Arc};
 
 use image::{ImageError, ImageReader, Rgb32FImage};
 
 use crate::{
     colour::Colour,
-    linalg::{Vec3, Vec4},
-    material::Material,
+    linalg::{Point3, Vec3, Vec4},
+    material::{Lambertian, Material, Metal},
     objects::{IntoPrimitives, Object, Triangle},
+    texture::{ImageTexture, UVTriangle},
 };
 
 #[derive(Default)]
@@ -19,6 +20,7 @@ pub struct WavefrontObj {
     faces: Vec<(usize, Vec<ObjIndex>)>,
     lines: Vec<(usize, Vec<isize>)>,
     mtllib: Option<MtlLib>,
+    mat_assign: HashMap<usize, Arc<String>>,
 }
 
 impl WavefrontObj {
@@ -27,6 +29,8 @@ impl WavefrontObj {
         let data = read_to_string(&path)?;
         let mut obj = Self::default();
         obj.file = path_ref_to_string(&path);
+        let mut current_material: Option<Arc<String>> = None;
+        let mut current_face = 0;
         for (row_num, row) in data.split("\n").enumerate() {
             let row_num = row_num + 1;
             if row.starts_with("#")
@@ -92,6 +96,10 @@ impl WavefrontObj {
                         index.normal = Some(idx.unwrap());
                     }
                     face.push(index);
+                    if let Some(ref material) = current_material {
+                        obj.mat_assign.insert(current_face, Arc::clone(material));
+                    }
+                    current_face += 1;
                 }
                 obj.faces.push((row_num, face));
             } else if row.starts_with("vn ") {
@@ -161,7 +169,12 @@ impl WavefrontObj {
                     return Err(WavefrontObjError::ParseError(obj.file, row_num, err));
                 }
             } else if row.starts_with("usemtl ") {
-                continue;
+                if let Some((_, mat)) = row.split_once(" ") {
+                    current_material = Some(Arc::new(mat.to_owned()));
+                } else {
+                    let err = Box::new(WavefrontObjError::MissingArgument("usemtl".to_owned()));
+                    return Err(WavefrontObjError::ParseError(obj.file, row_num, err));
+                }
             } else {
                 return Err(WavefrontObjError::UnsupportedType(
                     obj.file,
@@ -174,6 +187,9 @@ impl WavefrontObj {
     }
 
     fn validate(mut self) -> Result<Self, WavefrontObjError> {
+        if !self.mat_assign.is_empty() && self.mtllib.is_none() {
+            return Err(WavefrontObjError::NoMaterial(self.file));
+        }
         let n_vertices = self.vertices.len();
         let n_texture_coords = self.texture_coords.len();
         let n_normals = self.vertex_normals.len();
@@ -248,9 +264,12 @@ impl WavefrontObj {
         Ok(self)
     }
 
-    pub fn triangulate(&self, material: Material) -> Surface {
+    fn _triangulate(
+        &self,
+        cb: impl Fn(Point3, Vec3, Vec3, usize, &ObjIndex, &ObjIndex, &ObjIndex) -> Object,
+    ) -> Surface {
         let mut surface = Surface(vec![]);
-        for (_, face) in self.faces.iter() {
+        for (face_idx, (_, face)) in self.faces.iter().enumerate() {
             let idx0 = face[0].clone();
             let p0 = self.vertices[idx0.vertex as usize].pr3();
             for window in face[1..].windows(2) {
@@ -258,22 +277,60 @@ impl WavefrontObj {
                 let idx2 = window[1].clone();
                 let p1 = self.vertices[idx1.vertex as usize].pr3();
                 let p2 = self.vertices[idx2.vertex as usize].pr3();
-                let triangle = Triangle::new(p0, p1 - p0, p2 - p0, material.clone());
+                let triangle = cb(p0, p1 - p0, p2 - p0, face_idx, &idx0, &idx1, &idx2);
                 surface.0.push(triangle);
             }
         }
         surface
     }
+
+    pub fn triangulate_with_material(&self, material: Material) -> Surface {
+        self._triangulate(|q, u, v, _, _, _, _| Triangle::new(q, u, v, material.clone()))
+    }
+
+    pub fn triangulate(&self) -> Result<Surface, WavefrontObjError> {
+        match self.mtllib {
+            None => Err(WavefrontObjError::NoMaterial(self.file.clone())),
+            Some(ref mtllib) => {
+                let materials = mtllib.build()?;
+                let default = Metal::new(Colour::new(0.15, 0.15, 0.73), 0.1);
+                let surface = self._triangulate(|q, u, v, face_idx, idx0, idx1, idx2| {
+                    let uv0 = idx0.texture.map(|idx| self.texture_coords[idx as usize]);
+                    let uv1 = idx1.texture.map(|idx| self.texture_coords[idx as usize]);
+                    let uv2 = idx2.texture.map(|idx| self.texture_coords[idx as usize]);
+                    let mat = if let Some(mat_name) = self.mat_assign.get(&face_idx) {
+                        let mat_idx = mtllib.material_names.get(mat_name.as_ref()).unwrap();
+                        materials.get(mat_idx).unwrap_or(&default)
+                    } else {
+                        &default
+                    };
+                    let triangle = Triangle::new(q, u, v, mat.clone());
+                    if uv0.is_none() || uv1.is_none() || uv2.is_none() {
+                        triangle
+                    } else {
+                        let p0 = uv0.unwrap();
+                        let p1 = uv1.unwrap() - p0;
+                        let p2 = uv2.unwrap() - p0;
+                        UVTriangle::new(p0, p1, p2, triangle)
+                    }
+                });
+                Ok(surface)
+            }
+        }
+    }
 }
 
+#[derive(Debug)]
 pub struct MtlLib {
-    materials: HashMap<String, Mtl>,
+    material_names: HashMap<String, usize>,
+    materials: HashMap<usize, Mtl>,
 }
 
 impl MtlLib {
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, WavefrontObjError> {
         let file = path_ref_to_string(&path);
         let mut lib = Self {
+            material_names: HashMap::new(),
             materials: HashMap::new(),
         };
         let data = read_to_string(&path)?;
@@ -286,14 +343,15 @@ impl MtlLib {
             if row.starts_with("# ") || row.is_empty() {
                 continue;
             } else if row.starts_with("newmtl ") {
-                if let Some(name) = row.split(" ").next() {
+                if let Some(name) = row.split(" ").nth(1) {
                     mat_name = name.to_owned();
                 } else {
                     let err = Box::new(WavefrontObjError::MissingArgument("newmtl".to_owned()));
                     return Err(WavefrontObjError::ParseError(file, row_num, err));
                 }
                 if mtls > 0 {
-                    lib.materials.insert(mat_name.clone(), mtl);
+                    lib.material_names.insert(mat_name.clone(), mtls);
+                    lib.materials.insert(mtls, mtl);
                     mtl = Mtl::default();
                 }
                 mtls += 1;
@@ -335,13 +393,29 @@ impl MtlLib {
             }
         }
         if mtls > 0 {
-            lib.materials.insert(mat_name.clone(), mtl);
+            lib.material_names.insert(mat_name.clone(), mtls);
+            lib.materials.insert(mtls, mtl);
         }
         Ok(lib)
     }
+
+    fn build(&self) -> Result<HashMap<usize, Material>, WavefrontObjError> {
+        let mut result = HashMap::new();
+        for (idx, mtl) in self.materials.iter() {
+            // TODO: Implement some actual logic here
+            match mtl.diffuse_texture {
+                None => result.insert(*idx, Lambertian::new(mtl.diffuse)),
+                Some(ref buffer) => result.insert(
+                    *idx,
+                    Lambertian::from_texture(ImageTexture::from_buffer(buffer)),
+                ),
+            };
+        }
+        Ok(result)
+    }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Mtl {
     ambient: Colour,
     diffuse: Colour,
@@ -375,6 +449,7 @@ pub enum WavefrontObjError {
     MissingArgument(String),
     IncompleteColour(String, usize),
     UnknownIlluminationModel(String, usize, String),
+    NoMaterial(String),
 }
 
 impl std::fmt::Display for WavefrontObjError {
@@ -426,6 +501,7 @@ impl std::fmt::Display for WavefrontObjError {
                     "{file}, line {line}: Encountered unknown illumination model '{mode}'"
                 )
             }
+            Self::NoMaterial(ref file) => write!(f, "File {file} contains no mtllib directive"),
         }
     }
 }
@@ -493,6 +569,7 @@ impl std::fmt::Display for GeometryType {
     }
 }
 
+#[derive(Debug)]
 enum IlluminationModel {
     // 0. Color on and Ambient off
     ColourNoAmbient,

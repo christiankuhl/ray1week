@@ -84,6 +84,11 @@ impl ImageTexture {
             buffer: ImageReader::open(path)?.decode()?.into_rgb32f(),
         })))
     }
+    pub fn from_buffer(buffer: &Rgb32FImage) -> Texture {
+        Texture::new(Arc::new(Self {
+            buffer: buffer.clone(),
+        }))
+    }
 }
 
 impl Textured for ImageTexture {

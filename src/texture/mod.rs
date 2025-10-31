@@ -1,7 +1,9 @@
 mod perlin;
 mod textures;
+mod uvmap;
 
 pub use textures::*;
+pub use uvmap::UVTriangle;
 
 use std::{
     ops::{Deref, DerefMut},

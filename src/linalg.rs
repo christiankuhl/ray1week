@@ -339,3 +339,13 @@ impl Vec4 {
         Vec3::new(self.x / self.w, self.y / self.w, self.z / self.w)
     }
 }
+
+impl std::iter::Sum for Vec3 {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut res = Vec3::ZERO;
+        for v in iter {
+            res += v;
+        }
+        res
+    }
+}
