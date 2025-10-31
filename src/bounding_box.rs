@@ -88,6 +88,35 @@ impl AaBb {
             self.z.extend(DELTA);
         }
     }
+
+    pub fn corners(&self) -> Vec<Point3> {
+        vec![
+            Vec3::new(self.x.min, self.y.min, self.z.min),
+            Vec3::new(self.x.min, self.y.min, self.z.max),
+            Vec3::new(self.x.min, self.y.max, self.z.min),
+            Vec3::new(self.x.min, self.y.max, self.z.max),
+            Vec3::new(self.x.max, self.y.min, self.z.min),
+            Vec3::new(self.x.max, self.y.min, self.z.max),
+            Vec3::new(self.x.max, self.y.max, self.z.min),
+            Vec3::new(self.x.max, self.y.max, self.z.max),
+        ]
+    }
+
+    pub fn test_points(&self, n: usize) -> Vec<Point3> {
+        let mut res = Vec::new();
+        for x in 0..n {
+            for y in 0..n {
+                for z in 0..n {
+                    res.push(Vec3::new(
+                        self.x.min + x as f64 * self.x.length() / n as f64,
+                        self.y.min + y as f64 * self.y.length() / n as f64,
+                        self.z.min + z as f64 * self.z.length() / n as f64,
+                    ));
+                }
+            }
+        }
+        res
+    }
 }
 
 fn swap_to_ordered(x: f64, y: f64) -> (f64, f64) {

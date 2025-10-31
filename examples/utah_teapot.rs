@@ -8,7 +8,7 @@ fn main() -> Result<(), RenderError> {
     let mut world = Scene::new();
     let blue = Metal::new(Colour::new(0.15, 0.15, 0.73), 0.1);
     let teapot = WavefrontObj::from_file("examples/resources/teapot.obj")?;
-    let teapot = teapot.triangulate(blue);
+    let teapot = teapot.triangulate_with_material(blue);
     world.add(teapot);
     let cam = Camera {
         image_width: 800,

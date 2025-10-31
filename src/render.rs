@@ -11,6 +11,7 @@ use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::bounding_box::BVHNode;
 use crate::colour::Colour;
+use crate::effects::{RenderFilter, TrivialFilter};
 use crate::error::RenderError;
 use crate::linalg::{Point3, Vec3};
 use crate::material::ScatterResult;
@@ -44,7 +45,7 @@ pub struct Renderer {
     max_depth: usize,
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
-    center: Point3,
+    pub(crate) center: Point3,
     background: Texture,
 }
 
@@ -157,15 +158,17 @@ impl Renderer {
         }
     }
 
-    pub fn render<P>(&self, world: &mut Scene, p: &mut P) -> RgbImage
+    pub fn render_with_filter<P, F>(&self, world: &mut Scene, filter: F, p: &mut P) -> RgbImage
     where
         P: Write + Sync + Send,
+        F: RenderFilter,
     {
         let p = Arc::new(Mutex::new(p));
         writeln!(p.lock().unwrap(), "Collecting light sources...").unwrap();
         let lights = Scene::with_objects(world.lights());
         writeln!(p.lock().unwrap(), "Building render node hierarchy...").unwrap();
         let mut raw_objects = world.objects().iter().map(|o| Arc::clone(o)).collect();
+        filter.filter(self, &mut raw_objects);
         let bvh = BVHNode::new(&mut raw_objects);
         let mut blocks = self.image_blocks();
         writeln!(
@@ -192,6 +195,13 @@ impl Renderer {
         )
         .unwrap();
         self.assemble_image(&blocks)
+    }
+
+    pub fn render<P>(&self, world: &mut Scene, p: &mut P) -> RgbImage
+    where
+        P: Write + Sync + Send,
+    {
+        self.render_with_filter(world, TrivialFilter, p)
     }
 
     pub fn render_to_file<F, P>(
